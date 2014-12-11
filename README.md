@@ -13,10 +13,9 @@ Currently, there are two main modules, which need to be run separately.
 
 Usage:
 
-/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
-
-
-This will output to the directory from which the script is from. 
+	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
+	
+		This will output to the directory from which the script is run. 
 
 Softare Dependencies:
 
