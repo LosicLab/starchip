@@ -14,7 +14,9 @@ Currently, there are two main modules, which need to be run separately.
 Usage:
 
 /path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
-	This will output to the directory from which the script is from. 
+
+
+This will output to the directory from which the script is from. 
 
 Softare Dependencies:
 
@@ -34,11 +36,14 @@ Files Needed:
 Circular RNA is not poly-A modified, so generally data from poly-T amplified RNA is not appropriate for this.    
 
 Usage:
+
 	/path/to/StarChimPo/circles/circle_star.sh [Reads_threshold] [Subjects_threshold] star_dirs.txt
+
 		[Reads_threshold] is the minimum read support required for a circleRNA.  I.e. 5
 		[Subjects_threshold] is the minimum subjects support required I.e. 2
 		Where star_dirs.txt is a file with the full path to a star output directory on each line.  These should be distinctive directories.  Ie /path/to/star_subject1_run1/  
 		This will output to the directory from which the script is run. 
+
 Software Dependencies:
 	
 	R with the following packages: limma, edgeR
