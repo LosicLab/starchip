@@ -13,14 +13,23 @@ Currently, there are two main modules, which need to be run separately.
 
 Usage:
 	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
+
 	This will output to the directory from which the script is from. 
+
 Softare Dependencies:
+
 	samtools
+
 	bedtools
+
 	razerS3
+
 Files Needed:
+
 	reference_fasta_file (indexed with samtools)
+
 	reference gtf file in .bed format
+
 	repetative elements in .bed format
 
 ##############
