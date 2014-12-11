@@ -12,24 +12,20 @@ Currently, there are two main modules, which need to be run separately.
 ###############
 
 Usage:
-	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
 
+/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
 	This will output to the directory from which the script is from. 
 
 Softare Dependencies:
 
 	samtools
-
 	bedtools
-
 	razerS3
 
 Files Needed:
 
 	reference_fasta_file (indexed with samtools)
-
 	reference gtf file in .bed format
-
 	repetative elements in .bed format
 
 ##############
@@ -44,15 +40,23 @@ Usage:
 		Where star_dirs.txt is a file with the full path to a star output directory on each line.  These should be distinctive directories.  Ie /path/to/star_subject1_run1/  
 		This will output to the directory from which the script is run. 
 Software Dependencies:
+	
 	R with the following packages: limma, edgeR
+
 Files Needed:
+
 	-
+
 Resources:
+
 	It will use 1 cpu per sample.  Run times vary but an hour is typical. 
+
 Output:
+
 	Count matrix: circRNA.cutoff[readthreshold]reads.[subjectthreshold]ind.countmatrix
 	Info about each circRNA:  Circs[reads].[subjects].spliced.consensus
 	There are other files as well, but they are mostly useful only if you need to really dig into the data. 
 
 Known issues:
+
 	Haven't really dug into how well this utilizes paired-end data
