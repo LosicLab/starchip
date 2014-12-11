@@ -2,14 +2,14 @@
 use warnings;
 use strict;
 use Getopt::Std;
+use Cwd 'abs_path';
+
 ## usage: fusions-from-star.pl  outputname Chimeric.out.junction  
 
 ##IMPORTANT NOTE!  this calls 'samtools' and 'bedtools' and 'razers3'  please have these installed and in your path under those aliases.  
 	#It shouldn't crash without them, but you will get error messages rather than some of the outputs.
 	#$ module load samtools bedtools optitype
 	# ^ should do the trick. 
-
-
 # the goal of this program is to take a file of potential fusions from STAR (Chimeric.out.tab), and determine the read distribution around the fusion.
 # to do:    
 	# blat output.  blat is REALLY slow, and because of mem loading, probably faster if run in batches.  
@@ -25,8 +25,6 @@ use Getopt::Std;
 #Very adjustable variables
 my $pairedend =1; #1 means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.   
 my $consensus ="TRUE";  # anything but TRUE will make this skip the consensus output. 
-my $consensusloc= '/hpc/users/akersn01/scripts/fusions/consensus.sh';
-my $annotateloc= '/hpc/users/akersn01/scripts/fusions/coordinates2genes.sh';
 my $cutoff = 2; # number of minimum read support at jxn.  reccommend keep this above 2 or your run can take a long time.  
 my $cutoff2 = 2; # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
 		 #this cutoff2 value ranges from 1-70.  Our mapping requires 15bp overhang on a fusion so 84-99 and 0-14 will alwasy be 0 and max.  
@@ -48,9 +46,6 @@ my $splitscoremod = 10;
 my $spanscoremod = 20;
 my $skewpenalty = 4;
 my $repeatpenalty = 0.5 ; # score = score*(repeatpenalty^repeats)  --> a fusion can have 0,1,or 2 sites fall into repeat regions. 
-
-
-
 
 #Adjustable Variables (shouldn't change unless the format of Chimeric.out.junction from star changes:
 my $col_jxntype=6;
@@ -74,6 +69,10 @@ my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are for
 my $linecount=0;
 my $readlength =0;
 my %fusions =();
+my $script_dir=abs_path($0);
+$script_dir =~ s/fusions-from-star.pl//;
+my $consensusloc= $script_dir . 'consensus.sh';
+my $annotateloc= $script_dir . 'coordinates2genes.sh';
 
 #file management
 if (length(@ARGV) != 1) { die "Wrong number of arguments!\n";}
