@@ -1,6 +1,6 @@
-StarChimPo
+starchimp
 ==========
-StarChimPo is short for Star Chimeric Post, written by Kipp Akers.  
+starchimp is short for Star Chimeric Post, written by Kipp Akers.  
 
 This software is designed to take the chimeric output from the STAR alignment tool and discover high confidence fusions and circular RNA in the data. 
 Before running, you must have used a recent version of STAR with chimeric output turned on, to align your RNA-Seq data.
