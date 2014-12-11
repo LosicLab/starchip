@@ -7,9 +7,9 @@ Before running, you must have used a recent version of STAR with chimeric output
 
 Currently, there are two main modules, which need to be run separately. 
 
-###################
-####  Fusions  ####
-###################
+###############
+##  Fusions  ##
+###############
 
 Usage:
 	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
@@ -23,9 +23,9 @@ Files Needed:
 	reference gtf file in .bed format
 	repetative elements in .bed format
 
-#################
-#### Circles ####
-#################
+##############
+## Circles ##
+##############
 Circular RNA is not poly-A modified, so generally data from poly-T amplified RNA is not appropriate for this.    
 
 Usage:
