@@ -70,7 +70,7 @@ my $linecount=0;
 my $readlength =0;
 my %fusions =();
 my $script_dir=abs_path($0);
-$script_dir =~ s/fusions-from-star.pl//;
+$script_dir =~ s/hashtest.pl//;
 my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $troublemakers = $script_dir . 'pseudogenes.txt';
@@ -84,14 +84,15 @@ print "your final outputs will be in $outsumm and $outsumm.annotated\n";
 my $junction = $ARGV[1];
 my $sam = $junction;
 $sam =~ s/junction$/sam/ ; 
-
+print "opening $troublemakers\n";
 open PSEUDOS, "<$troublemakers" or die $!;
 my %pseudogenes;
 while (<PSEUDOS>) {
-        chomp;
-        my ($gene1, $gene2) = split /\s+/;
-        $pseudogenes{$gene1} .= exists $pseudogenes{$gene1} ? ",$gene2" : $gene2;
+	chomp;
+	my ($gene1, $gene2) = split /\s+/; 
+	$pseudogenes{$gene1} .= exists $pseudogenes{$gene1} ? ",$gene2" : $gene2; 
 }
+
 
 
 # primary data format; $chr1_pos1_chr2_pos2_strandA_strandB[0/1/2][0-RL]
@@ -100,201 +101,7 @@ while (<PSEUDOS>) {
 	#0-Read length starts at the fusion site =0 and expands outwards from there, to pos2+RL on right side, pos1-RL on left side.
 	# in most cases, we will use + strand notation for positions.
 
-open JUNCTION, "<$junction" or die $!; 
-while (my $x = <JUNCTION>) {
-	my @line = split(/\s+/, $x); 
-##some filtering 
-	next if ($line[$col_chrA] eq "chrM");
-	next if ($line[$col_chrB] eq "chrM");
-	next if ($line[$col_chrA] eq "MT");
-	next if ($line[$col_chrB] eq "MT");
-	next if ($line[$col_chrA] =~ m/GL*/);
-	next if ($line[$col_chrB] =~ m/GL*/);
-	next if ($line[$col_overlapL] > $overlapLimit);
-	next if ($line[$col_overlapR] > $overlapLimit);
-	#skipping problem regions (Ig antibody parts regions).  This could be improved for easily changing genomes...
-	next if ($line[$col_chrA] eq "chr2" && $line[$col_chrB] eq "chr2" && $line[$col_FusionposA] >= 89156874 && $line[$col_FusionposA] <=90471176 && $line[$col_FusionposB] >= 89156874 && $line[$col_FusionposB]<=90471176);
-	next if ($line[$col_chrA] eq "chr22" && $line[$col_chrB] eq "chr22" && $line[$col_FusionposA] >= 22385572 && $line[$col_FusionposA] <=23265082 && $line[$col_FusionposB] >= 22385572 && $line[$col_FusionposB]<=23265082);
-	next if ($line[$col_chrA] eq "chr14" && $line[$col_chrB] eq "chr14" && $line[$col_FusionposA] >= 105994256 && $line[$col_FusionposA] <=107283085 && $line[$col_FusionposB] >= 105994256 && $line[$col_FusionposB]<=107283085);
-	next if ($line[$col_chrA] eq "2" && $line[$col_chrB] eq "2" && $line[$col_FusionposA] >= 89156874 && $line[$col_FusionposA] <=90471176 && $line[$col_FusionposB] >= 89156874 && $line[$col_FusionposB]<=90471176);
-	next if ($line[$col_chrA] eq "22" && $line[$col_chrB] eq "22" && $line[$col_FusionposA] >= 22385572 && $line[$col_FusionposA] <=23265082 && $line[$col_FusionposB] >= 22385572 && $line[$col_FusionposB]<=23265082);
-	next if ($line[$col_chrA] eq "14" && $line[$col_chrB] eq "14" && $line[$col_FusionposA] >= 105994256 && $line[$col_FusionposA] <=107283085 && $line[$col_FusionposB] >= 105994256 && $line[$col_FusionposB]<=107283085);
-	#skipping other long genes
-	next if ($line[$col_chrA] eq "chr3" && $line[$col_chrB] eq "chr3" && $line[$col_FusionposA] >= 149530000 && $line[$col_FusionposA] <=149680000 && $line[$col_FusionposB] >= 149530000 && $line[$col_FusionposB]<=149680000);
-	next if ($line[$col_chrA] eq "3" && $line[$col_chrB] eq "3" && $line[$col_FusionposA] >= 149530000 && $line[$col_FusionposA] <=149680000 && $line[$col_FusionposB] >= 149530000 && $line[$col_FusionposB]<=149680000);
-	
-#calculate read length (where read length == the length of one pair of the sequencing if paired end)
-	if ($linecount < 1 ) {
-		if ($line[$col_chrA] =~ /chr/ ) { $chrflag = 1; }
-		my $cigarA=$line[$col_cigarA];
-		my $cigarB=$line[$col_cigarB];
-		my $lengthA = &splitCigar($cigarA);
-		my $lengthB = &splitCigar($cigarB);
-		if ($lengthA == $lengthB) {
-			$readlength=$lengthA;
-			print "Read length appears to be $readlength\n";
-		}	
-		elsif ($lengthA == (2*$lengthB)) {
-			$readlength=$lengthB;
-			print "Read length appears to be $readlength\n";
-		}
-		elsif ($lengthB == (2*$lengthA)) {
-			$readlength=$lengthA;
-			print "Read length appears to be $readlength\n";
-		}
-		else { print "read length error, please check input\n"; 
-			$readlength=100;
-			$linecount=-1;
-		}
-	}
-#Create two 'names' and check if they exist.  Checking the written + reverse allows us to collapse reads on opposite strands  
-	my $fusionname=$line[$col_chrA] . "_" . $line[$col_FusionposA] . "_" . $line[$col_chrB] . "_" . $line[$col_FusionposB] . "_" . $line[$col_strandA] . "_" . $line[$col_strandB] ; 
-	my $invStrandA = &reversestrand($line[$col_strandA]);
-	my $invStrandB = &reversestrand($line[$col_strandB]);
-	my $fusionnameInv=$line[$col_chrB] . "_" . $line[$col_FusionposB] . "_" . $line[$col_chrA] . "_" . $line[$col_FusionposA] . "_" . $invStrandB . "_" . $invStrandA ;
-	## chrA_pos1_+ fused to chrB_pos2_+ equals chrB_pos2_- fused to chrA_pos_- etc.  
-	##check the existence
-	if (exists $fusions{$fusionname}) {
-		&supportCigar(@line, $fusionname, "1");
-
-	}
-	elsif (exists $fusions{$fusionnameInv}) {
-	  #because this is the reverse compliment of the already indexed read, we'll feed in a rearranged line from Chimeric.out.junction, with the strands flipped.
-		my $chrA=$line[$col_chrB];
-		my $posA=$line[$col_FusionposB];
-		my $strandA = &reversestrand($line[$col_strandB]); 
-		my $chrB=$line[$col_chrA];
-		my $posB=$line[$col_FusionposA];
-		my $strandB = &reversestrand($line[$col_strandA]);
-		#6 7,8,9 unchanged/unimportant here
-		my $startposA = $line[$col_startposB];
-		my $cigarA = $line[$col_cigarB];
-		my $starposB = $line[$col_startposA];
-		my $cigarB = $line[$col_cigarA];
-		#print "@line\n";
-		#print "$chrA $posA $strandA $chrB $posB $strandB $line[7] $line[8] $line[9] $startposA $cigarA $starposB $cigarB\n";
-		&supportCigar($chrA, $posA, $strandA, $chrB, $posB, $strandB, $line[6], $line[7], $line[8], $line[9], $startposA, $cigarA, $starposB, $cigarB, $fusionnameInv, "2" );
-	}
-	else {
-		#create the array in the fusions hash
-		for my $x (0..($readlength-1)) {
-			$fusions{$fusionname}[0][$x] =0; #jxn crossing read support (Left side)
-			$fusions{$fusionname}[1][$x] =0; #jxn crossing read support (Right side)
-		}
-		$fusions{$fusionname}[2][0] = 0; #jxn spanning read support on the strands as named
-		$fusions{$fusionname}[2][1] = 0; # strand distribution (jxn crossing reads in 'fusionname' orientaiton with first listed chrm on the left)
-		$fusions{$fusionname}[2][2] = 0; # strand distribution (jxn crossing reads in 'fusionnameInv' orientation with first listed chrm on the right)
-		$fusions{$fusionname}[2][3] = 0; # A chrom anchored (for split reads, the pair lies on chromosome A)
-		$fusions{$fusionname}[2][4] = 0; # B chrom anchored (for split reads, the matepair lies on chromosome B)
-		$fusions{$fusionname}[2][5] = 0; #jxn spanning read support inverse strands
-		&supportCigar(@line, $fusionname, "1");
-	}
-	$linecount++;
-	#print "$fusionname\t$fusions{$fusionname}[0][0]\t$fusions{$fusionname}[1][0]\n";
-	#if ($linecount > 10 ) { die; }
-}
-my $numbkeys = scalar keys %fusions;
-print "Finished catologing fusion reads, now processing over $numbkeys\n";
-close(JUNCTION);
-
-##Post Processing and Filtering
-#SETUP
-my $fusioncounter =0;
-open (SUMM, ">$outsumm") or die; 
-print SUMM "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tReferenceSeq\tConsensusSeq\n";
-my $keycount ;
-
-#Join and Evaluate Fusions
-for my $key (keys %fusions) {#go through all 'fusions'
-	$keycount++ ;
-	#first filter by read support
-	if ($fusions{$key}[0][0] >=$cutoff && $fusions{$key}[1][0] >=$cutoff) {
-                my @keyarray=split(/_/, $key); #0:chrm1 1:pos 2:chr2 3:pos2 4:strand 5:strand 
-                 #skip same-chrom proximal fusions
-		if ($keyarray[0] ~~$keyarray[2] && (abs($keyarray[1]-$keyarray[3])<=$samechrom_wiggle) ){
-               		next;
-                }
-		#skip lopsided fusions (ie all the read support is on one side)
-		if ( ($fusions{$key}[2][1]+0.1)/($fusions{$key}[2][2]+0.1) >= $lopsidedupper || ($fusions{$key}[2][1]+0.1)/($fusions{$key}[2][2]+0.1) <= $lopsidedlower) {
-			next;
-		}
-		my $topspancount = $fusions{$key}[2][0];
-		my $bottomspancount = $fusions{$key}[2][5];
-		##now we need to do a broad check for spanning reads that didn't map to the exact fusion location
-		# I do this by doing a rough check for close locations.  This mostly works, but gets messy with larger values of $wiggle, and when fusion sites are near each other on the same chromosome.  
-		# in those cases, take results with a grain of salt.
-		if ($pairedend == 1) {  
-			for my $key2 (keys %fusions) { #cycle through all the keys again
-				next if ($key ~~$key2); #skip itself
-				if ($fusions{$key2}[2][0] >= 1 || $fusions{$key2}[2][5] >=1 ) { #we are only really interested in sites with spanning fusions
-					my @key2array=split(/_/, $key2); #see above for indices
-					next if ($key2array[0] ~~$key2array[2] && (abs($key2array[1]-$key2array[3])<=$samechrom_wiggle) ); #skip same chrom proximal
-					#check if the fusion from keyarray (has jxn crossing) has the same coordinates (within $wiggle bp) as $keyarray2
-					if ($keyarray[4]~~$key2array[4] && $keyarray[5]~~$key2array[5] && $keyarray[0]~~$key2array[0] && $keyarray[2]~~$key2array[2] && (abs($keyarray[1]-$key2array[1])<=$wiggle) && (abs($keyarray[3]-$key2array[3])<=$wiggle) ) {
-						#print "1: $key2 spans $key reads: $fusions{$key2}[2][0] sum before: $fusions{$key}[2][0]\n";
-						$topspancount += $fusions{$key2}[2][0];
-						$bottomspancount += $fusions{$key2}[2][5]; 
-					}
-					#check the inverse fusion
-					elsif (&reversestrand($keyarray[4])~~$key2array[5] && &reversestrand($keyarray[5])~~$key2array[4] && $keyarray[0]~~$key2array[2] && $keyarray[2]~~$key2array[0] && (abs($keyarray[1]-$key2array[3])<=$wiggle) && (abs($keyarray[3]-$key2array[1])<=$wiggle) ) {
-						$topspancount += $fusions{$key2}[2][5];
-						$bottomspancount += $fusions{$key2}[2][0];
-						#print "2: $key2 spans $key reads: $fusions{$key2}[2][0] sum before: $fusions{$key}[2][0]\n";
-					}
-				}
-			}
-		}
-		#Second, filter on spanning read pairs
-		my $spancount = $topspancount + $bottomspancount ; 
-		if ($spancount >= $spancutoff) { 
-			#next get an estimate of the 'unique reads' mapped by looking at how many unique read support values there are
-			my @array0; my @array1;
-			my $leftanchor ; my $rightanchor; 
-	                for my $x (0..($readlength-1)) { 
-				#cycle across possible support positions.  create arrays of # of reads of support at each position.  (skip 0 read support) Also note largest overlap in read support
-   	                	if ($fusions{$key}[0][$x] != 0) {
-					push (@array0, $fusions{$key}[0][$x]);	$leftanchor = $x;}
-				if ($fusions{$key}[1][$x] != 0) {
-					push (@array1, $fusions{$key}[1][$x]); $rightanchor = $x;}
-        	        }
-                	my %count0; my %count1;
-        	        @count0{@array0} =(); @count1{@array1} =(); #turn the arrays into hashes.
-	                my $unique0=scalar keys %count0; my $unique1=scalar keys %count1; #count the unique hash indices. 
-			my @kurtosisarray;
-               		for my $x (reverse (15..($readlength-16))) { push (@kurtosisarray, $fusions{$key}[0][$x]);}
-			for my $x (15..($readlength-16)) { push (@kurtosisarray, $fusions{$key}[1][$x]);}
-			my ($skew, $kurtosis)=&kurtosis(@kurtosisarray); #still calculating kurtosis, but not sure how useful it is.  
-			#filter by the number of these unique reads
-                	if ($unique0 >= $cutoff2 && $unique1 >= $cutoff2) {
-				$fusioncounter++;
-				my $splitreads = $fusions{$key}[2][1] + $fusions{$key}[2][2] ;
-				my ($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]); 
-				#0:split reads, 1:topsidesplit, 2:bottomsidesplit 3:spanreads 4;topspan 5;bottomspan 6:skew 7:chr1 8;loc1 9;strand1 10;chr2; 11;loc2; 12;strand2
-				#print "$splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],,$keyarray[2],$position2,$keyarray[5])\n";
-				my $score = &fusionScore($splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],$keyarray[2],$position2,$keyarray[5]);
-				
-				##Output. This can be changed as needed, but the first two columns need to be chr1:pos:str.  They are fed into coordinates2genes.sh for gene annotation later.  
-				if ($chrflag == 0 ) {
-					print SUMM "chr$keyarray[0]:$position1:$keyarray[4]\tchr$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\t";
-				}
-				else {
-					print SUMM "$keyarray[0]:$position1:$keyarray[4]\t$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\t";
-				}
-				&extractSequence($key);	
-				print "Filtered fusions count:$fusioncounter, searched $keycount\n";
-			}
-		}
-	}
-}
-print "Total fusions found: $fusioncounter\nNow Annotating these Fusions\n";
-close (SUMM);
-
-##Post filter gene-annotation here:
-my $annotate_command = $annotateloc . " " . $outsumm . " " . $refbed . " " . $repeatbed; 
-system($annotate_command); 
-#should create a file $outsum.annotated with gene annotations.
-#remove same gene fusions, simplify output
-my $outanno = $outsumm . ".annotated" ; 
+my $outanno = $ARGV[1];
 open ANNOTATED, "$outanno" or die $!;
 open (SUMM, ">$outsumm") or die;
 print SUMM "Partner1\tPartner2\tScore\tDiscordantReads\tSplitReads\tNearGene1\tDistance1\tNearGene2\tDistance2\n";
@@ -319,9 +126,14 @@ while (my $x = <ANNOTATED>) {
 		$gene2name[0] =~ s/gene_name:// ;
 		$gene2name[0] =~ s/"//g ;
 		#use a hash to eliminate known troublemaker genes. 
-		no warnings 'uninitialized';
-                if (($pseudogenes{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($pseudogenes{$gene2name[0]} =~ m/$gene1name[0]/)) { next; }
-		my $score = $line[2]; 
+		#if (($gene1name[0] eq "HLA-B" && $gene2name[0] eq "HLA-C") || ($gene1name[0] eq "HLA-C" && $gene2name[0] eq "HLA-B")) { next; }
+		#if (($gene1name[0] eq "FTL" && $gene2name[0] eq "FTLP3") || ($gene1name[0] eq "FTLP3" && $gene2name[0] eq "FTL")) { next; }
+		#if (($gene1name[0] eq "CES1" && $gene2name[0] eq "CES1P1") || ($gene1name[0] eq "CES1P1" && $gene2name[0] eq "CES1")) { next; }
+		#if (($gene1name[0] eq "CES1" && $gene2name[0] eq "CES1P1") || ($gene1name[0] eq "CES1P1" && $gene2name[0] eq "CES1")) { next; }
+		no warnings 'uninitialized'; 
+		if (($pseudogenes{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($pseudogenes{$gene2name[0]} =~ m/$gene1name[0]/)) { print "skip $gene1name[0] $gene2name[0] \n"; next; }
+		else { print "not skipping $gene1name[0] $gene2name[0] \n"; }
+		my $score = $line[3]; 
 		$score = $score*($repeatpenalty**$line[($indices[0]-2)]) ;   
 		print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\n";
 	}
