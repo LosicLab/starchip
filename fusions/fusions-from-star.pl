@@ -1,15 +1,14 @@
-#! /usr/bin/perl
+}#! /usr/bin/perl
 use warnings;
 use strict;
-use Getopt::Std;
 use Cwd 'abs_path';
 
 ## usage: fusions-from-star.pl  outputname Chimeric.out.junction  
 
-##IMPORTANT NOTE!  this calls 'samtools' and 'bedtools' and 'razers3'  please have these installed and in your path under those aliases.  
+##IMPORTANT NOTE!  this calls 'samtools' and 'bedtools' and 'mafft'  please have these installed and in your path under those aliases.  
 	#It shouldn't crash without them, but you will get error messages rather than some of the outputs.
-	#$ module load samtools bedtools optitype
-	# ^ should do the trick. 
+	#$ module load samtools bedtools 
+	# ^ should do the trick for the first two, but you'll need to obtain mafft. 
 # the goal of this program is to take a file of potential fusions from STAR (Chimeric.out.tab), and determine the read distribution around the fusion.
 # to do:    
 	# blat output.  blat is REALLY slow, and because of mem loading, probably faster if run in batches.  
@@ -22,30 +21,30 @@ use Cwd 'abs_path';
 	# a warning if no valid input
 	# add uniqueness/read distribution bonus to score
 
-#Very adjustable variables
-my $pairedend =1; #1 means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.   
-my $consensus ="TRUE";  # anything but TRUE will make this skip the consensus output. 
-my $cutoff = 2; # number of minimum read support at jxn.  reccommend keep this above 2 or your run can take a long time.  
-my $cutoff2 = 2; # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
-		 #this cutoff2 value ranges from 1-70.  Our mapping requires 15bp overhang on a fusion so 84-99 and 0-14 will alwasy be 0 and max.  
-		 #may make sense to scale cutoff2 by the read support for a given fusion.  ie if only 15 reads support it, 20 is impossible.  
-my $spancutoff = 2; #minimum number of non-split reads support.  
+#Very adjustable variables (change for your data/needs)
+my $offset = 1; # 0 based or 1 based coordinate system?  UCSC = 0, Ensemble = 1
+my $pairedend =0; #1 means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
+my $consensus ="TRUE";  # anything but TRUE will make this skip the consensus output.
+my $cutoff = 5; # number of minimum read support at jxn.  reccommend keep this above 2 or your run can take a long time.
+my $cutoff2 = 4; # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
+#this cutoff2 value ranges from 1-70 (100bp reads).  Our mapping requires 15bp overhang on a fusion so 84-99 and 0-14 will alwasy be 0 and max.
+#may make sense to scale cutoff2 by the read support for a given fusion.  ie if only 15 reads support it, 20 is impossible.
+my $spancutoff = 0; #minimum number of non-split reads support.
 my $wiggle = 500 ; #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
-my $overlapLimit = 5; #wiggle room for joining very closely called fusion sites. 
-my $samechrom_wiggle = 20000; #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome proximal fusions.
+my $overlapLimit = 5; #wiggle room for joining very closely called fusion sites.
+my $samechrom_wiggle = 20000; #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome proximal
 my $lopsidedupper = 5; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
 my $lopsidedlower = 0.2; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
 my $refbed="/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed";
 my $repeatbed="/sc/orga/work/akersn01/ref/repeats_hg19plus.bed";
 my $ref = "/sc/orga/work/akersn01/ref/star/ENSEMBL.homo_sapiens.release-75_overhang100/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa";
+#my $ref = "/sc/orga/scratch/akersn01/tempref/GRCh38_Gencode21/GCA_000001405.15_GRCh38_no_alt_analysis_set.fa";
 
-print "Using the following variables:\nPaired-End: $pairedend\nSplit Reads Cutoff: $cutoff\nUnique Support Values Min: $cutoff2\nSpanning Reads Cutoff: $spancutoff\nLocation Wiggle Room (spanning reads): $wiggle bp\nLocation Wiggle Room (split reads) : $overlapLimit bp\nMin-distance : $samechrom_wiggle bp\nRead Distribution upper limit: $lopsidedupper X\nRead Distribution lower limit: $lopsidedlower X\n";
-
-#Scoring Parameters
-my $splitscoremod = 10; 
+#Scoring Parameters (feel free to tweak)
+my $splitscoremod = 10;
 my $spanscoremod = 20;
 my $skewpenalty = 4;
-my $repeatpenalty = 0.5 ; # score = score*(repeatpenalty^repeats)  --> a fusion can have 0,1,or 2 sites fall into repeat regions. 
+my $repeatpenalty = 0.5 ; # score = score*(repeatpenalty^repeats)  --> a fusion can have 0,1,or 2 sites fall into repeat regions.
 
 #Adjustable Variables (shouldn't change unless the format of Chimeric.out.junction from star changes:
 my $col_jxntype=6;
@@ -62,19 +61,19 @@ my $col_strandB=5;
 my $col_overlapL=7;
 my $col_overlapR=8;
 my $numbcolumns=14; #need this one in case you junciton.out file/input changes.  this should be a non-existant final column (ie Chimeric.junciton.out has 0-13 columns)
-			#could fix this to be a lot more robust...
-my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are format: 1,2,X
+#should fix this to be more robust...
+my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are format: 1,2,X. The script checks your data so you can leave this as zero.
+print "Using the following variables:\nPaired-End: $pairedend\nSplit Reads Cutoff: $cutoff\nUnique Support Values Min: $cutoff2\nSpanning Reads Cutoff: $spancutoff\nLocation Wiggle Room (spanning reads): $wiggle bp\nLocation Wiggle Room (split reads) : $overlapLimit bp\nMin-distance : $samechrom_wiggle bp\nRead Distribution upper limit: $lopsidedupper X\nRead Distribution lower limit: $lopsidedlower X\n";
 
 #set variables
 my $linecount=0;
 my $readlength =0;
 my %fusions =();
 my $script_dir=abs_path($0);
-$script_dir =~ s/fusions-from-star.pl//;
+$script_dir =~ s/fusions-from-star.starnet.pl//;
 my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $troublemakers = $script_dir . 'pseudogenes.txt';
-
 
 #file management
 if (length(@ARGV) != 1) { die "Wrong number of arguments!\n";}
@@ -85,12 +84,13 @@ my $junction = $ARGV[1];
 my $sam = $junction;
 $sam =~ s/junction$/sam/ ; 
 
-open PSEUDOS, "<$troublemakers" or die $!;
-my %pseudogenes;
-while (<PSEUDOS>) {
+#create a hash of known pseudogenes---loci that consistantly show FP fusions. 
+open TROUBLE, "<$troublemakers" or die $!;
+my %trouble_spots;
+while (<TROUBLE>) {
         chomp;
         my ($gene1, $gene2) = split /\s+/;
-        $pseudogenes{$gene1} .= exists $pseudogenes{$gene1} ? ",$gene2" : $gene2;
+        $trouble_spots{$gene1} .= exists $trouble_spots{$gene1} ? ",$gene2" : $gene2;
 }
 
 
@@ -148,10 +148,10 @@ while (my $x = <JUNCTION>) {
 		}
 	}
 #Create two 'names' and check if they exist.  Checking the written + reverse allows us to collapse reads on opposite strands  
-	my $fusionname=$line[$col_chrA] . "_" . $line[$col_FusionposA] . "_" . $line[$col_chrB] . "_" . $line[$col_FusionposB] . "_" . $line[$col_strandA] . "_" . $line[$col_strandB] ; 
+	my $fusionname=$line[$col_chrA] . "__" . $line[$col_FusionposA] . "__" . $line[$col_chrB] . "__" . $line[$col_FusionposB] . "__" . $line[$col_strandA] . "__" . $line[$col_strandB] ; 
 	my $invStrandA = &reversestrand($line[$col_strandA]);
 	my $invStrandB = &reversestrand($line[$col_strandB]);
-	my $fusionnameInv=$line[$col_chrB] . "_" . $line[$col_FusionposB] . "_" . $line[$col_chrA] . "_" . $line[$col_FusionposA] . "_" . $invStrandB . "_" . $invStrandA ;
+	my $fusionnameInv=$line[$col_chrB] . "__" . $line[$col_FusionposB] . "__" . $line[$col_chrA] . "__" . $line[$col_FusionposA] . "__" . $invStrandB . "__" . $invStrandA ;
 	## chrA_pos1_+ fused to chrB_pos2_+ equals chrB_pos2_- fused to chrA_pos_- etc.  
 	##check the existence
 	if (exists $fusions{$fusionname}) {
@@ -201,7 +201,7 @@ close(JUNCTION);
 #SETUP
 my $fusioncounter =0;
 open (SUMM, ">$outsumm") or die; 
-print SUMM "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tReferenceSeq\tConsensusSeq\n";
+print SUMM "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tReferenceSeq\tConsensusSeq\tAvgAlnScore\n";
 my $keycount ;
 
 #Join and Evaluate Fusions
@@ -209,7 +209,7 @@ for my $key (keys %fusions) {#go through all 'fusions'
 	$keycount++ ;
 	#first filter by read support
 	if ($fusions{$key}[0][0] >=$cutoff && $fusions{$key}[1][0] >=$cutoff) {
-                my @keyarray=split(/_/, $key); #0:chrm1 1:pos 2:chr2 3:pos2 4:strand 5:strand 
+                my @keyarray=split(/__/, $key); #0:chrm1 1:pos 2:chr2 3:pos2 4:strand 5:strand 
                  #skip same-chrom proximal fusions
 		if ($keyarray[0] ~~$keyarray[2] && (abs($keyarray[1]-$keyarray[3])<=$samechrom_wiggle) ){
                		next;
@@ -227,7 +227,7 @@ for my $key (keys %fusions) {#go through all 'fusions'
 			for my $key2 (keys %fusions) { #cycle through all the keys again
 				next if ($key ~~$key2); #skip itself
 				if ($fusions{$key2}[2][0] >= 1 || $fusions{$key2}[2][5] >=1 ) { #we are only really interested in sites with spanning fusions
-					my @key2array=split(/_/, $key2); #see above for indices
+					my @key2array=split(/__/, $key2); #see above for indices
 					next if ($key2array[0] ~~$key2array[2] && (abs($key2array[1]-$key2array[3])<=$samechrom_wiggle) ); #skip same chrom proximal
 					#check if the fusion from keyarray (has jxn crossing) has the same coordinates (within $wiggle bp) as $keyarray2
 					if ($keyarray[4]~~$key2array[4] && $keyarray[5]~~$key2array[5] && $keyarray[0]~~$key2array[0] && $keyarray[2]~~$key2array[2] && (abs($keyarray[1]-$key2array[1])<=$wiggle) && (abs($keyarray[3]-$key2array[3])<=$wiggle) ) {
@@ -267,8 +267,10 @@ for my $key (keys %fusions) {#go through all 'fusions'
 			#filter by the number of these unique reads
                 	if ($unique0 >= $cutoff2 && $unique1 >= $cutoff2) {
 				$fusioncounter++;
+				my $position1; my $position2; 
 				my $splitreads = $fusions{$key}[2][1] + $fusions{$key}[2][2] ;
-				my ($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]); 
+				if ($offset == 1 ) {($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]); }
+				else { $position1=$keyarray[1] ; $position2=$keyarray[3]; }
 				#0:split reads, 1:topsidesplit, 2:bottomsidesplit 3:spanreads 4;topspan 5;bottomspan 6:skew 7:chr1 8;loc1 9;strand1 10;chr2; 11;loc2; 12;strand2
 				#print "$splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],,$keyarray[2],$position2,$keyarray[5])\n";
 				my $score = &fusionScore($splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],$keyarray[2],$position2,$keyarray[5]);
@@ -290,43 +292,54 @@ print "Total fusions found: $fusioncounter\nNow Annotating these Fusions\n";
 close (SUMM);
 
 ##Post filter gene-annotation here:
-my $annotate_command = $annotateloc . " " . $outsumm . " " . $refbed . " " . $repeatbed; 
-system($annotate_command); 
-#should create a file $outsum.annotated with gene annotations.
-#remove same gene fusions, simplify output
-my $outanno = $outsumm . ".annotated" ; 
-open ANNOTATED, "$outanno" or die $!;
-open (SUMM, ">$outsumm") or die;
-print SUMM "Partner1\tPartner2\tScore\tDiscordantReads\tSplitReads\tNearGene1\tDistance1\tNearGene2\tDistance2\n";
-while (my $x = <ANNOTATED>) {
-        my @line=split(/\s+/, $x);
-	my $cols = scalar(@line);
-        my @geneannot=grep(/gene_id/, @line);
-	my @indices=grep{ $line[$_] =~ /gene_id/ } 0..$#line ; 
-	if (@geneannot) {
-		my @anno1=split(/;/, $geneannot[0]);
-       		my @anno2=split(/;/, $geneannot[1]);
-	        my @gene1name=grep(/gene_name/, @anno1);
-        	my @gene2name=grep(/gene_name/, @anno2);
-	        #skip same-gene 'fusions'
-		if ($gene1name[0] eq $gene2name[0]) {
-            	    next;  }
-		#skip commonly confused gene pairs:
-		my $dist2 = $line[($cols-1)];
-		my $dist1 = $line[($cols-4)];
-		$gene1name[0] =~ s/gene_name:// ;
-		$gene1name[0] =~ s/"//g ;  
-		$gene2name[0] =~ s/gene_name:// ;
-		$gene2name[0] =~ s/"//g ;
-		#use a hash to eliminate known troublemaker genes. 
-		no warnings 'uninitialized';
-                if (($pseudogenes{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($pseudogenes{$gene2name[0]} =~ m/$gene1name[0]/)) { next; }
-		my $score = $line[2]; 
-		$score = $score*($repeatpenalty**$line[($indices[0]-2)]) ;   
-		print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\n";
+if ($fusioncounter >0 ) {
+	my $annotate_command = $annotateloc . " " . $outsumm . " " . $refbed . " " . $repeatbed; 
+	system($annotate_command); 
+	#should create a file $outsum.annotated with gene annotations.
+	#remove same gene fusions, simplify output
+	my $outanno = $outsumm . ".annotated" ; 
+	open ANNOTATED, "$outanno" or die $!;
+	open (SUMM, ">$outsumm") or die;
+
+	print SUMM "Partner1\tPartner2\tScore\tDiscordantReads\tSplitReads\tAvgAS\tNearGene1\tDistance1\tNearGene2\tDistance2\tConsensusSeq\n";
+	my $maxAS= $readlength/2;
+	my $minAS= ($readlength-20)/2; #this 20 is a changeable star parameter
+	my $rangeAS= $maxAS-$minAS;
+	while (my $x = <ANNOTATED>) {
+        	my @line=split(/\s+/, $x);
+		my $cols = scalar(@line);
+        	my @geneannot=grep(/gene_id/, @line);
+		#indices stores the positions of gene_id in .annotated.  # repeats is 1 less, #alignments score is 2 less.  For perl indexes, these become -2 and -3.
+		my @indices=grep{ $line[$_] =~ /gene_id/ } 0..$#line ; 
+		if (@geneannot) {
+			my @anno1=split(/;/, $geneannot[0]);
+       			my @anno2=split(/;/, $geneannot[1]);
+		        my @gene1name=grep(/gene_name/, @anno1);
+        		my @gene2name=grep(/gene_name/, @anno2);
+		        #skip same-gene 'fusions'
+			if ($gene1name[0] eq $gene2name[0]) {
+        	    	    next;  }
+			#define gene names/distances
+			my $dist2 = $line[($cols-1)]; my $dist1 = $line[($cols-4)];
+			$gene1name[0] =~ s/gene_name:// ; $gene1name[0] =~ s/"//g ;  
+			$gene2name[0] =~ s/gene_name:// ; $gene2name[0] =~ s/"//g ;
+			#use a hash to eliminate known pseudogene 'fusions' 
+			no warnings 'uninitialized';
+                	if (($trouble_spots{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($trouble_spots{$gene2name[0]} =~ m/$gene1name[0]/)) { next; }
+			#pull out consensus sequence and alignment score
+			my $consSeq=$line[($indices[0]-4)];
+			my $alignScore=$line[($indices[0]-3)];
+			#calculate fusion score
+			my $score = $line[2]; 
+			$score = $score*($repeatpenalty**$line[($indices[0]-2)]) ;#penalize repeats
+			$score = $score*(($alignScore-$minAS)/($rangeAS));   
+			print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq\n";
+		}
 	}
 }
-
+else {
+	open (SUMM, ">$outsumm") or die;
+}
 
 
 ### BEGIN SUBROUTINES ###
@@ -524,40 +537,42 @@ sub supportCigar { #input: SJ line
 }
 sub extractSequence {
 	#print SUMM ">$_[0]\n";
-	my @splitseq = split(/_/, $_[0]);#0:chrm1 1:pos 2:chr2 3:pos2 4:strandA 5:strandB
+	my @splitseq = split(/__/, $_[0]);#0:chrm1 1:pos 2:chr2 3:pos2 4:strandA 5:strandB
 ###obtain the REFERENCE sequence based on positions.
 ##Left side sequence
 	my $seqpos1; my $seqpos2;
-	my $chrA = $splitseq[0]; $chrA =~ s/chr//;
+	my $chrA = $splitseq[0]; 
+	if ($chrflag != 1 ) { $chrA =~ s/chr//; }
   ##if +
 	if ($splitseq[4]~~"+") {
-		$seqpos2 = ($splitseq[1]-1);
+		$seqpos2 = ($splitseq[1]-$offset);
 		$seqpos1 = $seqpos2 - $readlength;
 	}
   ##if - 
 	if ($splitseq[4]~~"-") {
-		$seqpos1 = ($splitseq[1]+1);
+		$seqpos1 = ($splitseq[1]+$offset);
 		$seqpos2 = $seqpos1 +$readlength;
 	}
 	my $cmdA = "samtools faidx $ref $chrA:$seqpos1-$seqpos2";
 ##Right side sequence
 	my $seqBpos1 ; my $seqBpos2; 
-	my $chrB = $splitseq[2]; $chrB =~ s/chr//;
+	my $chrB = $splitseq[2]; 
+	if ($chrflag != 1 ) { $chrB =~ s/chr//;}
   ##if + 
 	if ($splitseq[5] ~~ "+") {
-		$seqBpos1 = ($splitseq[3]+1);
+		$seqBpos1 = ($splitseq[3]+$offset);
 		$seqBpos2 = $seqBpos1 + $readlength ; 
 	}
   ##if -
 	if ($splitseq[5] ~~ "-") {
-		$seqBpos2 = ($splitseq[3]-1);
+		$seqBpos2 = ($splitseq[3]-$offset);
 		$seqBpos1 = $seqBpos2 - $readlength;
 	}
 	my $cmdB = "samtools faidx $ref $chrB:$seqBpos1-$seqBpos2";
 ##collect REference fasta with samtools
 	my @fastaA=`$cmdA`;
 	my @fastaB=`$cmdB`;
-	#print "results @fasta\n";
+	#print "results @fastaB\n";
 	my $sequenceA;
 	my $sequenceB;
   ## FASTA-->string of sequence
@@ -592,21 +607,25 @@ sub extractSequence {
 	if ($consensus eq "TRUE"){
 		my $tempID = int(rand(10000000)); 
 		#consensus command is : ~/scripts/fusions/consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
-		my $consensuscmd = "$consensusloc $splitseq[0] $splitseq[1] $splitseq[2] $splitseq[3] $junction $sam $tempID $refseq";
-		my @consfastq=`$consensuscmd`; 
-		my $consensusSeq;
-		while (@consfastq) {
-			my $x = shift(@consfastq);
-			chomp $x;
-			next if ($x =~ m/^@/); #skip readID
-			last if ($x =~ m/^\+/); #stop after reads
-			$consensusSeq .= $x;
- 		}
-		$consensusSeq =~ s/^n+//;
+		my $consensuscmd = "$consensusloc $splitseq[0] $splitseq[1] $splitseq[2] $splitseq[3] $junction $sam $tempID $refseq $script_dir";
+		my @consResults=`$consensuscmd`; 
+		my $consensusSeq=$consResults[0];
+		chomp $consensusSeq;
+		my $avgAS=$consResults[1];
+		chomp $avgAS;
+		$avgAS = sprintf "%.1f", $avgAS ; 
+		#@while (@consfastq) {
+		#	my $x = shift(@consfastq);
+		#	chomp $x;
+		#	next if ($x =~ m/^@/); #skip readID
+		#	last if ($x =~ m/^\+/); #stop after reads
+		#	$consensusSeq .= $x;
+ 		#}
+		#$consensusSeq =~ s/^n+//;
 		if ($consensusSeq ne ""){
-			print SUMM "$consensusSeq\n";		
+			print SUMM "$consensusSeq\t$avgAS\n";		
 		}
-		else { print SUMM".\n"; }
+		else { print SUMM".\t$avgAS\n"; }
 	}
 }
 sub reversestrand {

@@ -2,7 +2,7 @@
 use warnings;
 
 # Chimera-score.pl by Kipp Akers
-# usage: chimera-score.pl star_output_dir >output_file
+# usage: chimera-score.pl star_output_dir filter_script.pl
 
 $dir=$ARGV[0];
 $sam = $dir . "Chimeric.out.sam";
@@ -13,6 +13,13 @@ $junctionline=0;
 open (JUNCTIONS, "< $junctions") or die $!;
 	@chimeric_out_junctions=<JUNCTIONS>;
 close JUNCTIONS or die $!;
+
+$tempfile=$dir;
+$tempfile =~ s/\/$//;
+$tempfile =~ s/.*\///;
+$uniqID = $tempfile; 
+$tempfile = $tempfile . ".temp";
+open (TEMPOUT, ">$tempfile") or die $!; 
 
 open (SAM, "< $sam") or die $!;
 	while (<SAM>) { #go through each line of the junctions file
@@ -54,8 +61,15 @@ open (SAM, "< $sam") or die $!;
 	}
 &junc_filter($name, $score);
 #print "$name\t$score\n";
-
-
+#now the filtered circs are in the temp file. 
+close TEMPOUT;
+# sort the tempfile and pipe it into filter circs. 
+my $cmd1 = 'sort -k1,1 -k2,2n -k5,5n -k6,6 ';
+$cmd1 = $cmd1 . $tempfile ; 
+my $cmd2 = $ARGV[1] . " " . $uniqID ;
+system("$cmd1 | $cmd2 "); 
+$remove_temp='rm ' . $tempfile ; 
+system("$remove_temp") ;
 
 sub junc_filter
 {	
@@ -66,13 +80,21 @@ sub junc_filter
 		die "out of order chimeric files, $split[9] does not match $_[0] at line $junctionline.  please check inputs\n";
 	}
 	if ($split[6] >= 0 &&
+		$split[0] ne "MT" &&
+		$split[0] ne "chrM" &&
                 $split[0] eq $split[3] &&
                 $split[2] eq $split[5] &&
-                (($split[2] eq "-" && $split[4] > $split[1] && $split[4]-$split[1] < 100000) || ($split[2] eq "+" && $split[1]>$split[4] && $split[1]-$split[4]<100000))) {
+		$split[7] <= 5 && $split[8] <= 5 &&
+                (($split[2] eq "-" && $split[4] > $split[1] && $split[4]-$split[1] < 100000) || ($split[2] eq "+" && $split[1]>$split[4] && $split[1]-$split[4]<100000)) ) {
                         #if junction spanning read && chimeric segs on same chrom && same strand && ( neg || pos strand && donor and acceptor are within 100kb)
 			chomp $chimeric_out_junctions[$junctionline];
-                        print "$chimeric_out_junctions[$junctionline]\t$_[1]\n"; #print the junctions.out line + the score
-        
+			if ($split[2] eq "+") {
+	                        print TEMPOUT "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\n"; #print the junctions.out line + the score
+        		}
+			else {
+	                        print TEMPOUT "$split[0]\t$split[4]\t$split[2]\t$split[3]\t$split[1]\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\n"; #print the junctions.out line + the score
+			}
+	
         }
 	$junctionline++;
 }

@@ -1,19 +1,26 @@
-
 #usage: ./circle_splice.sh uniqID star_files_dir  >output_file
+#usage: ./circle_splice.sh joinstrands.uniqID star_files_dir cutoff
+
 #the circular candidates should be in the format output by filter_circs.pl
 # ie  reads_support chrom finish strand chrom start etc etc. 
 
-echo -e "subject\ttotalreads\t+strand\t-strand\tchrm\tpos\tstrand\tchrm\tpos\tstrand\tjxntype\toverlapL\toverlapR\talignmentscoreMedian\tscoreL\tscoreR\tGenomicSize\tSplicedSize\tLeftBorder\tRightBorder\tLeftEnvelope\tRightEnvelope\tEnvREads\tEnvelopingStrand\tEnvelopingJxnType\tExons\tExonStarts\tExonsizes"
+#echo -e "subject\ttotalreads\t+strand\t-strand\tchrm\tpos\tstrand\tchrm\tpos\tstrand\tjxntype\toverlapL\toverlapR\talignmentscoreMedian\tscoreL\tscoreR\tGenomicSize\tSplicedSize\tLeftBorder\tRightBorder\tLeftEnvelope\tRightEnvelope\tEnvREads\tEnvelopingStrand\tEnvelopingJxnType\tExons\tExonStarts\tExonsizes"
+joinstrands=$1
+outfile=`echo $joinstrands |sed 's/joinstrands.//'`
+outfile=${outfile}.${3}.spliced
 star_aligns=$2
 sj_out=${star_aligns}/SJ.out.tab
+cutoff=$3
 
 # line is a circular RNA candidate
 while read line ; do
+   linearray=(${line// / })
+  #echo ${linearray[0]}
+   if  (( ${linearray[0]} >= $cutoff )) ; then
 	rm -f tempfile.${1}
 	rm -f border-jxns-right.${1}
 	rm -f border-jxns-left.${1}
 	rm -f enveloping-reads.${1}
-	linearray=(${line// / })
 	#put all splice sites within the circle into a tempfile (SJ.out.tab must be in the parent directory)
 	#also put any border splices into two files
 	awk -v id=${1} -v chrom="${linearray[3]}" -v start="${linearray[4]}" -v finish="${linearray[7]}" -v reads="${linearray[0]}" ' {
@@ -126,5 +133,8 @@ while read line ; do
 	rm -f border-jxns-right.${1}
 	rm -f border-jxns-left.${1}
 	rm -f enveloping-reads.${1}
-done
+  fi 
+done < $joinstrands > $outfile
+sed -i '1isubject\ttotalreads\t+strand\t-strand\tchrm\tpos\tstrand\tchrm\tpos\tstrand\tjxntype\toverlapL\toverlapR\talignmentscoreMedian\tscoreL\tscoreR\tGenomicSize\tSplicedSize\tLeftBorder\tRightBorder\tLeftEnvelope\tRightEnvelope\tEnvREads\tEnvelopingStrand\tEnvelopingJxnType\tExons\tExonStarts\tExonsizes' $outfile
+
 

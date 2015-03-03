@@ -5,12 +5,16 @@ use List::Util qw( min max );
  #circs.candidates should be in the format: chr<space>pos1<space>pos2<space>whatever else.  output as circs"${cutoff}"."${minSubjLimit}".investigate from circle_star.sh
  #splicesuffix would be the end of the files we're pulling stats from.  ie if files are form: star_AOR_XXX.5.spliced splicesuffix=.5.spliced
 
+#known issue: in rare cases where there is equal support for multiple values, the consensus values don't correlate to eache.
+#	ie: 3 subjects with 10 exons and 3 subjects with 11 exons.  Consensus might list 10 exon start values and 11 exon length values.  
+
+
 open CANDIDATES, "<$ARGV[0]" or die $!;
 $tail=$ARGV[1];
 opendir DIRECTORY, "./" or die $!;
 @files=readdir(DIRECTORY);
-$consensusfilename=$ARGV[0] . $ARGV[1] . ".consensus";
-$fullinfofilename=$ARGV[0] . $ARGV[1] . ".allvariants";
+$consensusfilename=$ARGV[0] . ".consensus";
+$fullinfofilename=$ARGV[0] . ".allvariants";
 open CONSENSUS, ">$consensusfilename" or die $!;##             
 print CONSENSUS "chrm\tpos1\tpos2\tjxntype\toverlapL\toverlapR\tMedianAS\tGenomicSize\tSplicedSize\tLeftBorder\tRightBorder\tLeftEnvelope\tRightEnvelope\tEnvelopingStrand\tEnvelopingJxnType\tExons\tExonStarts\tExonsizes\n";
 open ALLVARIANTS, ">$fullinfofilename" or die $!;
@@ -32,6 +36,7 @@ while (my $cRNA=<CANDIDATES>) {
         @exons=();
         @exonstarts=();
         @exonsizes=();
+	@spliceinfo=();
 	
 	#$dumbount=0;
 	@cRNAarray=split(/\s+/, $cRNA); #0:chrm 1:pos 2:pos 3:#of inds
@@ -44,11 +49,12 @@ while (my $cRNA=<CANDIDATES>) {
 			my $hit=`grep -P \"$query\" $files[$f]`;
 			if (length ($hit)) { 
 				#$dumbcount++;
-				#print "$dumbcount\t $hit\n";
+				#print "$hit\n";
 				@hitsplit=split(/\s+/, $hit); #17:splicedsize 18:leftborder intron distance 19:rightborder intron distance 20:distance to left enveloping splice 21: distance to right enveloping splice 23:enveloping splice strand 25:#of exons 26:exon start positions(relative, comma sep) 27: exon sizes (comma sep)
 				$jxntype = $hitsplit[10];
 				$overlapL = $hitsplit[11];
 				$overlapR = $hitsplit[12];
+				push (@spliceinfo, "$hitsplit[17]_$hitsplit[25]_$hitsplit[26]_$hitsplit[27]");
 				push (@medianAS, $hitsplit[13]);
 				push (@splicedsizes, $hitsplit[17]);
 				push (@leftIntrons, $hitsplit[18]);
@@ -61,6 +67,7 @@ while (my $cRNA=<CANDIDATES>) {
 				push (@exonstarts, $hitsplit[26]);
 				push (@exonsizes, $hitsplit[27]);
 			}
+		#print "$files[$f]\n";
 		}
 	}
 	#print out the 'steady' info about each circ candidate
@@ -71,8 +78,43 @@ while (my $cRNA=<CANDIDATES>) {
 	my $median=&median(@medianAS);
 	print CONSENSUS "$median\t$hitsplit[16]\t";
 	print ALLVARIANTS "$median\t$hitsplit[16]\t";
+	#find the index of the most common splice, using the @spliceinfo array. 
+	my %count;
+	$count{$_}++ for @spliceinfo;
+	# presuming at least one item in @spliceinfo:
+	my ($winner, $winner_count) = each %count;
+	my @winners=$winner;
+	while (my ($maybe, $maybe_count) = each %count) {
+        	if ($maybe_count == $winner_count) {
+        	        push (@winners, $maybe);
+        	}
+		if ($maybe_count > $winner_count) {
+                	$winner = $maybe;
+                	$winner_count = $maybe_count;
+                	@winners=$maybe;
+        	}		
+	}
+	#now @winners has the most common splice motifs.  if there are many, select one:
+	# select the best one (has the smallest splice size)
+	my $topsplice = $winners[0];
+	my $smallest_size = $topsplice;
+	$smallest_size =~ s/_.+//;
+	if (scalar(@winners) > 1) {
+        	foreach my $x (@winners) {
+                	my $size = $x;
+                	$size =~ s/_.+//;
+                	if ($size < $smallest_size) {
+                        	$topsplice = $x;
+                        	$smallest_size = $size;
+                	}
+        	}
+	}	
+	#get index of that. 
+	my( $index )= grep { $spliceinfo[$_] eq $topsplice } 0..$#spliceinfo;
+	## below, I no longer use the arraystats max values, i take the one from $index
 	#Spliced Size 
 	my ($splicemax, $splicelist) = arraystats(@splicedsizes);
+	$splicemax=$splicedsizes[$index];
 	print CONSENSUS "$splicemax\t";
 	print ALLVARIANTS "$splicelist\t";
 	#LeftBorder Introns
@@ -101,16 +143,28 @@ while (my $cRNA=<CANDIDATES>) {
         print ALLVARIANTS "$jxnlist\t";
 	# number of Exons
 	my ($exonsmax, $exonslist) = arraystats(@exons);
+	$exonsmax = $exons[$index];
         print CONSENSUS "$exonsmax\t";
         print ALLVARIANTS "$exonslist\t";
 	#start postitions of exons
 	my ($exonstartmax, $exonstartlist) = arraystats(@exonstarts);
-        print CONSENSUS "$exonstartmax\t";
+        $exonstartmax = $exonstarts[$index];
+	print CONSENSUS "$exonstartmax\t";
         print ALLVARIANTS "$exonstartlist\t";
 	#Exon Sizes
 	my ($exonsizemax, $exonsizelist) = arraystats(@exonsizes);
+	$exonsizemax = $exonsizes[$index];
         print CONSENSUS "$exonsizemax\n";
         print ALLVARIANTS "$exonsizelist\n";
+	#die;
+	my $splicesize2;
+	my @splices = split(/,/,$exonsizemax); 
+	for (@splices) {
+		$splicesize2 += $_;
+	}
+	if ($splicesize2 != $splicemax ){
+		print "warning: for cRNA:$cRNAarray[0]\t$cRNAarray[2]\t$cRNAarray[1] there was a splicing error.";
+	}  
 	#die;
 }
 sub arraystats

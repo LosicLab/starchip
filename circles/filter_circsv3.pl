@@ -65,7 +65,7 @@ while (defined (my $queryline = <STDIN>)) {
 			$minusmedian=&median(@minusscores);
 			$median=&median(@scores);
 			#at this point I flip the positions, so it goes low to high.  
-			print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\n";
+			print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\tchr$line2[3]:$line2[4]-$line2[1]\n";
 			#if ($pluscount >0) {
 			#	print BEDFILE "$chrm\t$pos1\t$pos2\tIDplaceholder\t$pluscount\t+\t$pos1\t$pos2\t255,0,0\t1\t1\t0\n"
 			#}
@@ -93,7 +93,7 @@ while (defined (my $queryline = <STDIN>)) {
 				push @minusscores, $line1[9];
 	}	}	}
 }
-print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\n";
+print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\tchr$line2[3]:$line2[4]-$line2[1]\n";
 #if ($pluscount >0) {
 #	print BEDFILE "$chrm\t$pos1\t$pos2\tIDplaceholder\t$pluscount\t+\t$pos1\t$pos2\t255,0,0\t1\t1\t0\n";
 #}
