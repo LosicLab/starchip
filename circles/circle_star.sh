@@ -49,12 +49,12 @@ while read f ; do
 	uniqID=${array[${uniqIDindex}]}
 	Parent="$(dirname "$f")"
 	echo $uniqID >> temp_subject_IDS.txt
-	#filter chimera to circular, sort, create a bed file for each person, create joinstrands file #chimera-score.pl checks the directory $f for "Chimeric.out.sam"  and "Chimeric.out.junction"
-	${DIR}/chimera-score.pl $f/ |	awk '$1!="chrM" && $1!="MT" && $8<=5 && $9<=5 { print $1,$2,$3,$4,$5,$6,$7,$8,$9,$15}' |
-	awk '{ if ($3 =="+") print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 ;else print $1,$5,$3,$4,$2,$6,$7,$8,$9,$10 }' | sort -k1,1 -k2,2n -k5,5n -k6,6 |
-	${DIR}/filter_circsv3.pl ${uniqID}
 	IDarray=("${IDarray[@]}" "${f}")
 done < ${3}
+
+#filter chimera to circular, sort, create joinstrands file. #chimera-score.pl checks the directory $f for "Chimeric.out.sam"  and "Chimeric.out.junction"
+cat $3 | xargs --max-procs=${cpus} -I {} ${DIR}/chimera-score.pl {}/ ${DIR}/filter_circsv3.pl
+#done < ${3}
 wait  #wait for all joinstrands files to finish.
 
 ##Generate a cutoff file with all cRNA above the reads cutoff
@@ -70,8 +70,8 @@ for cutoff in "${cutofflist[@]}" ; do
 done 
 #generates circs"${cutoff}"."${minSubjLimit}".investigate
 
-
 ## Create a count matrix using joinstrands files + circs"${cutoff}"."${minSubjLimit}".investigate (separate file is called make_circ_table.sh)
+echo "Creating a count matrix.  This may take a long time."
 rm -f circ.headers
 rm -f  row.names
 for f in ${cutofflist[@]} ; do
@@ -92,10 +92,11 @@ for cutoff in ${cutofflist[@]} ; do
 		rm -f ${f}.temp
 		while read circ ; do
 			circarray=(${circ// / })
-			#ucscname="chr"${circarray[0]}":"${circarray[1]}"-"${circarray[2]}
-			searchstring="${circarray[0]}\t${circarray[1]}\t.\t${circarray[0]}\t${circarray[2]}"
-		        grephit=$(grep -P $searchstring $f )
-                	if  [[ $? -eq  0 ]] ; then 
+			ucscname="chr"${circarray[0]}":"${circarray[1]}"-"${circarray[2]}
+			#searchstring="${circarray[0]}\t${circarray[1]}\t.\t${circarray[0]}\t${circarray[2]}"
+		        #grephit=$(grep -P $searchstring $f )
+                	grephit=$(fgrep $ucscname $f )
+			if  [[ $? -eq  0 ]] ; then 
         		        echo $grephit |cut -f1 -d" " >>${f}.temp
                         else
                                 echo "0" >> ${f}.temp
@@ -113,8 +114,8 @@ for cutoff in ${cutofflist[@]} ; do
 	cat circ.headers.cutoff${cutoff}.${minSubjLimit} circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix >tempmatrix
 	mv tempmatrix circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix 
 	rm circ.headers.cutoff${cutoff}.${minSubjLimit}
-done 
-wait ${!}
+done
+##wait ${!}
 rm row.names
 
 #generate counts per million. 
@@ -126,7 +127,6 @@ wait
 
 
 #splicing
-
 if [ $4 == 'splice' ] ; then
 	echo "splicing... "
 	for cutoff in "${cutofflist[@]}" ; do
@@ -141,7 +141,6 @@ if [ $4 == 'splice' ] ; then
 	done
 	wait
 fi
-
 #generates .consensus and .allvariants files.  
 
 
