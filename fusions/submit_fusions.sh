@@ -15,11 +15,12 @@ echo "
 #BSUB -q alloc
 #BSUB -P acc_PBG
 #BSUB -W 1:00
-#BSUB -n 1
+#BSUB -n 2
 ###BSUB -P acc_PBG
-#BSUB -m manda
-#BSUB -R "rusage[mem=8000]"
-module load bedtools samtools optitype
-/hpc/users/akersn01/scripts/fusions/fusions-from-star.pl "${ID}" "${line}"
+###BSUB -m manda
+#BSUB -R "rusage[mem=5000]"
+#BSUB -R "span[hosts=1]"
+module load bedtools samtools
+/hpc/users/akersn01/scripts/starchimp/fusions/fusions-from-star.pl "${ID}" "${line}"
 " > runfiles/${ID}.lsf
 done < junctionfiles.txt

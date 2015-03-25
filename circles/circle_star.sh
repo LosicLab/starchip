@@ -53,7 +53,7 @@ while read f ; do
 done < ${3}
 
 #filter chimera to circular, sort, create joinstrands file. #chimera-score.pl checks the directory $f for "Chimeric.out.sam"  and "Chimeric.out.junction"
-cat $3 | xargs --max-procs=${cpus} -I {} ${DIR}/chimera-score.pl {}/ ${DIR}/filter_circsv3.pl
+cat $3 | xargs --max-procs=${cpus} -I {} ${DIR}/chimera-score.pl {} ${DIR}/filter_circsv3.pl
 #done < ${3}
 wait  #wait for all joinstrands files to finish.
 

@@ -1,4 +1,4 @@
-}#! /usr/bin/perl
+#! /usr/bin/perl
 use warnings;
 use strict;
 use Cwd 'abs_path';
@@ -10,37 +10,49 @@ use Cwd 'abs_path';
 	#$ module load samtools bedtools 
 	# ^ should do the trick for the first two, but you'll need to obtain mafft. 
 # the goal of this program is to take a file of potential fusions from STAR (Chimeric.out.tab), and determine the read distribution around the fusion.
+
 # to do:    
-	# blat output.  blat is REALLY slow, and because of mem loading, probably faster if run in batches.  
-		# think the best solution may be to access the webserver?  can't be.
+	# blat/blast output.  blat is REALLY slow, and because of mem loading, probably faster if run in batches.  
+		# check-pseudogenes.sh is a work in progress, but should work eventually, once I get gtf-->fasta parsing correct. 
 		# run all blat at once.
 		# $ blat t=dna q=rna /path/to/database /path/to/query 
 		# the other issue is that blat/blast don't lend themselves to computational filtering easily.  Kind of need a human eye to look at the result and see the telltale FP flags.   
 
 #other things to do:
 	# a warning if no valid input
-	# add uniqueness/read distribution bonus to score
+	# make changing from hg19 easier.  currently Antibody parts regions are hardcoded in.  
+
 
 #Very adjustable variables (change for your data/needs)
 my $offset = 1; # 0 based or 1 based coordinate system?  UCSC = 0, Ensemble = 1
-my $pairedend =0; #1 means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
+my $pairedend =1; #1 means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
 my $consensus ="TRUE";  # anything but TRUE will make this skip the consensus output.
-my $cutoff = 5; # number of minimum read support at jxn.  reccommend keep this above 2 or your run can take a long time.
-my $cutoff2 = 4; # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
+my $cutoff = 2; # number of minimum read support at jxn.  reccommend keep this above 2 or your run can take a long time.
+my $cutoff2 = 2; # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
 #this cutoff2 value ranges from 1-70 (100bp reads).  Our mapping requires 15bp overhang on a fusion so 84-99 and 0-14 will alwasy be 0 and max.
 #may make sense to scale cutoff2 by the read support for a given fusion.  ie if only 15 reads support it, 20 is impossible.
-my $spancutoff = 0; #minimum number of non-split reads support.
+my $spancutoff = 3; #minimum number of non-split reads support.  If single end data, this must be 0. 
 my $wiggle = 500 ; #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
 my $overlapLimit = 5; #wiggle room for joining very closely called fusion sites.
 my $samechrom_wiggle = 20000; #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome proximal
 my $lopsidedupper = 5; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
 my $lopsidedlower = 0.2; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
-my $refbed="/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed";
-my $repeatbed="/sc/orga/work/akersn01/ref/repeats_hg19plus.bed";
-my $ref = "/sc/orga/work/akersn01/ref/star/ENSEMBL.homo_sapiens.release-75_overhang100/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa";
-#my $ref = "/sc/orga/scratch/akersn01/tempref/GRCh38_Gencode21/GCA_000001405.15_GRCh38_no_alt_analysis_set.fa";
 
-#Scoring Parameters (feel free to tweak)
+
+##Reference Files: MUST be correct paths:
+	# a bed format version of a gtf.  
+my $refbed="/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed";
+#my $refbed="/sc/orga/projects/losicb01a/common_folder/ref/mm10/bed/Mus_musculus.GRCm38.75.gtf.chr.bed";
+	# a bed format list of known repeats
+my $repeatbed="/sc/orga/work/akersn01/ref/repeats_hg19plus.bed";
+#my $repeatbed="/sc/orga/projects/JanssenIBD/blosic/DSS_Colon_experiment_T_B_Cell_transfer_models/fusions/Repeats_Class_mm10_09.20.2013.bed";
+	# fasta reference.  should be indexed (run 'samtools faidx file.fa')
+my $ref = "/sc/orga/work/akersn01/ref/star/ENSEMBL.homo_sapiens.release-75_overhang100/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa";
+#my $ref="/sc/orga/projects/PBG/REFERENCES/mm10/tophat/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa";
+#my $ref = "/sc/orga/scratch/akersn01/tempref/GRCh38_Gencode21/GCA_000001405.15_GRCh38_no_alt_analysis_set.fa";
+#my $gtf = "/sc/orga/projects/losicb01a/common_folder/ref/hg19/gtf/gencode.v19.annotation.gtf"; 
+
+#Scoring Parameters (feel free to tweak).
 my $splitscoremod = 10;
 my $spanscoremod = 20;
 my $skewpenalty = 4;
@@ -70,10 +82,11 @@ my $linecount=0;
 my $readlength =0;
 my %fusions =();
 my $script_dir=abs_path($0);
-$script_dir =~ s/fusions-from-star.starnet.pl//;
+$script_dir =~ s/fusions-from-star.pl//;
 my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $troublemakers = $script_dir . 'pseudogenes.txt';
+my $blastscript = $script_dir . 'check-pseudogenes.sh'; 
 
 #file management
 if (length(@ARGV) != 1) { die "Wrong number of arguments!\n";}
@@ -85,7 +98,7 @@ my $sam = $junction;
 $sam =~ s/junction$/sam/ ; 
 
 #create a hash of known pseudogenes---loci that consistantly show FP fusions. 
-open TROUBLE, "<$troublemakers" or die $!;
+open TROUBLE, "<$troublemakers" or die "opening $troublemakers: $!";
 my %trouble_spots;
 while (<TROUBLE>) {
         chomp;
@@ -125,7 +138,7 @@ while (my $x = <JUNCTION>) {
 	
 #calculate read length (where read length == the length of one pair of the sequencing if paired end)
 	if ($linecount < 1 ) {
-		if ($line[$col_chrA] =~ /chr/ ) { $chrflag = 1; }
+		if ($line[$col_chrA] =~ /chr/ ) { print "Format appears to be chr1 chr2 etc\n" ; $chrflag = 1; }
 		my $cigarA=$line[$col_cigarA];
 		my $cigarB=$line[$col_cigarB];
 		my $lengthA = &splitCigar($cigarA);
@@ -336,6 +349,9 @@ if ($fusioncounter >0 ) {
 			print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq\n";
 		}
 	}
+	#blast output: work in progress
+	#my $blastcmd = "$blastscript $outsumm $gtf $ref";
+	#system($blastcmd); 
 }
 else {
 	open (SUMM, ">$outsumm") or die;
@@ -569,6 +585,7 @@ sub extractSequence {
 		$seqBpos1 = $seqBpos2 - $readlength;
 	}
 	my $cmdB = "samtools faidx $ref $chrB:$seqBpos1-$seqBpos2";
+	#print "$cmdA\n$cmdB\n";
 ##collect REference fasta with samtools
 	my @fastaA=`$cmdA`;
 	my @fastaB=`$cmdB`;
