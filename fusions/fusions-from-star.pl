@@ -18,9 +18,7 @@ use Cwd 'abs_path';
 		# $ blat t=dna q=rna /path/to/database /path/to/query 
 		# the other issue is that blat/blast don't lend themselves to computational filtering easily.  Kind of need a human eye to look at the result and see the telltale FP flags.   
 
-#other things to do:
-	# a warning if no valid input
-	# make changing from hg19 easier.  currently Antibody parts regions are hardcoded in.  
+if (scalar(@ARGV) != 2 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction\nBe sure to check parameters in fusions-from-star.pl";}
 
 
 #Very adjustable variables (change for your data/needs)
@@ -37,7 +35,7 @@ my $overlapLimit = 5; #wiggle room for joining very closely called fusion sites.
 my $samechrom_wiggle = 20000; #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome proximal
 my $lopsidedupper = 5; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
 my $lopsidedlower = 0.2; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
-
+my $genome = "hg19" ;#will look for file: data/$genome.abparts.  currently have hg19, hg38, and mm9
 
 ##Reference Files: MUST be correct paths:
 	# a bed format version of a gtf.  
@@ -75,7 +73,7 @@ my $col_overlapR=8;
 my $numbcolumns=14; #need this one in case you junciton.out file/input changes.  this should be a non-existant final column (ie Chimeric.junciton.out has 0-13 columns)
 #should fix this to be more robust...
 my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are format: 1,2,X. The script checks your data so you can leave this as zero.
-print "Using the following variables:\nPaired-End: $pairedend\nSplit Reads Cutoff: $cutoff\nUnique Support Values Min: $cutoff2\nSpanning Reads Cutoff: $spancutoff\nLocation Wiggle Room (spanning reads): $wiggle bp\nLocation Wiggle Room (split reads) : $overlapLimit bp\nMin-distance : $samechrom_wiggle bp\nRead Distribution upper limit: $lopsidedupper X\nRead Distribution lower limit: $lopsidedlower X\n";
+print "Using the following variables:\nPaired-End: $pairedend\nGenome: $genome\nSplit Reads Cutoff: $cutoff\nUnique Support Values Min: $cutoff2\nSpanning Reads Cutoff: $spancutoff\nLocation Wiggle Room (spanning reads): $wiggle bp\nLocation Wiggle Room (split reads) : $overlapLimit bp\nMin-distance : $samechrom_wiggle bp\nRead Distribution upper limit: $lopsidedupper X\nRead Distribution lower limit: $lopsidedlower X\n";
 
 #set variables
 my $linecount=0;
@@ -87,6 +85,7 @@ my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $troublemakers = $script_dir . 'pseudogenes.txt';
 my $blastscript = $script_dir . 'check-pseudogenes.sh'; 
+my $abpartsfile = $script_dir . 'data/' . $genome . '.abparts';
 
 #file management
 if (length(@ARGV) != 1) { die "Wrong number of arguments!\n";}
@@ -105,7 +104,16 @@ while (<TROUBLE>) {
         my ($gene1, $gene2) = split /\s+/;
         $trouble_spots{$gene1} .= exists $trouble_spots{$gene1} ? ",$gene2" : $gene2;
 }
-
+#index the antibody regions for this genome:
+open ABS, "<$abpartsfile" or die $!;
+my @AbParts;
+my $abindex=0; 
+while (my $x = <ABS>) {
+        my @line = split(/\s+/, $x); #AbParts lines are formatted: chrm pos1 pos2
+        $AbParts[$abindex][0]{$line[0]} = $line[1]; ##data format: $AbParts[index][0=lower/1=upper position]{chrom}
+        $AbParts[$abindex][1]{$line[0]} = $line[2]; ##data format: $AbParts[index][0=lower/1=upper position]{chrom}
+        $abindex++;
+}
 
 # primary data format; $chr1_pos1_chr2_pos2_strandA_strandB[0/1/2][0-RL]
 	#where strand is + or -
@@ -114,7 +122,7 @@ while (<TROUBLE>) {
 	# in most cases, we will use + strand notation for positions.
 
 open JUNCTION, "<$junction" or die $!; 
-while (my $x = <JUNCTION>) {
+EXITHERE: while (my $x = <JUNCTION>) {
 	my @line = split(/\s+/, $x); 
 ##some filtering 
 	next if ($line[$col_chrA] eq "chrM");
@@ -125,16 +133,9 @@ while (my $x = <JUNCTION>) {
 	next if ($line[$col_chrB] =~ m/GL*/);
 	next if ($line[$col_overlapL] > $overlapLimit);
 	next if ($line[$col_overlapR] > $overlapLimit);
-	#skipping problem regions (Ig antibody parts regions).  This could be improved for easily changing genomes...
-	next if ($line[$col_chrA] eq "chr2" && $line[$col_chrB] eq "chr2" && $line[$col_FusionposA] >= 89156874 && $line[$col_FusionposA] <=90471176 && $line[$col_FusionposB] >= 89156874 && $line[$col_FusionposB]<=90471176);
-	next if ($line[$col_chrA] eq "chr22" && $line[$col_chrB] eq "chr22" && $line[$col_FusionposA] >= 22385572 && $line[$col_FusionposA] <=23265082 && $line[$col_FusionposB] >= 22385572 && $line[$col_FusionposB]<=23265082);
-	next if ($line[$col_chrA] eq "chr14" && $line[$col_chrB] eq "chr14" && $line[$col_FusionposA] >= 105994256 && $line[$col_FusionposA] <=107283085 && $line[$col_FusionposB] >= 105994256 && $line[$col_FusionposB]<=107283085);
-	next if ($line[$col_chrA] eq "2" && $line[$col_chrB] eq "2" && $line[$col_FusionposA] >= 89156874 && $line[$col_FusionposA] <=90471176 && $line[$col_FusionposB] >= 89156874 && $line[$col_FusionposB]<=90471176);
-	next if ($line[$col_chrA] eq "22" && $line[$col_chrB] eq "22" && $line[$col_FusionposA] >= 22385572 && $line[$col_FusionposA] <=23265082 && $line[$col_FusionposB] >= 22385572 && $line[$col_FusionposB]<=23265082);
-	next if ($line[$col_chrA] eq "14" && $line[$col_chrB] eq "14" && $line[$col_FusionposA] >= 105994256 && $line[$col_FusionposA] <=107283085 && $line[$col_FusionposB] >= 105994256 && $line[$col_FusionposB]<=107283085);
 	#skipping other long genes
-	next if ($line[$col_chrA] eq "chr3" && $line[$col_chrB] eq "chr3" && $line[$col_FusionposA] >= 149530000 && $line[$col_FusionposA] <=149680000 && $line[$col_FusionposB] >= 149530000 && $line[$col_FusionposB]<=149680000);
-	next if ($line[$col_chrA] eq "3" && $line[$col_chrB] eq "3" && $line[$col_FusionposA] >= 149530000 && $line[$col_FusionposA] <=149680000 && $line[$col_FusionposB] >= 149530000 && $line[$col_FusionposB]<=149680000);
+	#next if ($line[$col_chrA] eq "chr3" && $line[$col_chrB] eq "chr3" && $line[$col_FusionposA] >= 149530000 && $line[$col_FusionposA] <=149680000 && $line[$col_FusionposB] >= 149530000 && $line[$col_FusionposB]<=149680000);
+	#next if ($line[$col_chrA] eq "3" && $line[$col_chrB] eq "3" && $line[$col_FusionposA] >= 149530000 && $line[$col_FusionposA] <=149680000 && $line[$col_FusionposB] >= 149530000 && $line[$col_FusionposB]<=149680000);
 	
 #calculate read length (where read length == the length of one pair of the sequencing if paired end)
 	if ($linecount < 1 ) {
@@ -160,6 +161,39 @@ while (my $x = <JUNCTION>) {
 			$linecount=-1;
 		}
 	}
+#Skip antibody Parts regions: ab files have chr.  so if $chrflag=1, we're ok.
+	if ($chrflag == 1 ) { 
+		foreach my $z (0..$abindex) {
+			no warnings 'uninitialized' ; 
+                	if ($AbParts[$z][0]{$line[$col_chrA]} <= $line[$col_FusionposA] && $line[$col_FusionposA] <= $AbParts[$z][1]{$line[$col_chrA]}) {
+                        	#print "pos1 match\n";
+	                        foreach	my $y (0..$abindex) {
+        	                        if ($AbParts[$y][0]{$line[$col_chrB]} <= $line[$col_FusionposB] && $line[$col_FusionposB]<= $AbParts[$y][1]{$line[$col_chrB]}) {
+                        	                #print "Skipping $line[$col_chrA]:$line[$col_FusionposA] $line[$col_chrB]:$line[$col_FusionposB]";
+                	                        next EXITHERE;
+	                                }
+        	                }
+                	}
+        	}
+	}
+	elsif ($chrflag == 0 ) {
+		my $chrA = "chr" . $line[$col_chrA] ; 
+		my $chrB = "chr" . $line[$col_chrB];
+                foreach my $z (0..$abindex) {
+                        no warnings 'uninitialized' ;
+                        if ($AbParts[$z][0]{$chrA} <= $line[$col_FusionposA] && $line[$col_FusionposA] <= $AbParts[$z][1]{$chrA}) {
+                                #print "pos1 match\n";
+                                foreach my $y (0..$abindex) {
+                                        if ($AbParts[$y][0]{$chrB} <= $line[$col_FusionposB] && $line[$col_FusionposB]<= $AbParts[$y][1]{$chrB}) {
+                                                #print "Skipping $line[$col_chrA]:$line[$col_FusionposA] $line[$col_chrB]:$line[$col_FusionposB]";
+                                                next EXITHERE;
+                                        }
+                                }
+                        }
+                }
+        }
+
+
 #Create two 'names' and check if they exist.  Checking the written + reverse allows us to collapse reads on opposite strands  
 	my $fusionname=$line[$col_chrA] . "__" . $line[$col_FusionposA] . "__" . $line[$col_chrB] . "__" . $line[$col_FusionposB] . "__" . $line[$col_strandA] . "__" . $line[$col_strandB] ; 
 	my $invStrandA = &reversestrand($line[$col_strandA]);
