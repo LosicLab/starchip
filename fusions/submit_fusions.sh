@@ -5,6 +5,8 @@
 
 mkdir -p log
 mkdir -p runfiles
+mkdir -p data
+params=$1
 while read line ; do
 ID=` echo $line | sed "s/\/Chimeric.out.junction//g" | sed 's/.*\///'`
 echo "
@@ -21,6 +23,6 @@ echo "
 #BSUB -R "rusage[mem=5000]"
 #BSUB -R "span[hosts=1]"
 module load bedtools samtools
-/hpc/users/akersn01/scripts/starchimp/fusions/fusions-from-star.pl "${ID}" "${line}"
+/hpc/users/akersn01/scripts/starchimp/fusions/fusions-from-star.pl data/"${ID}" "${line}" "${params}"
 " > runfiles/${ID}.lsf
-done < junctionfiles.txt
+done < $2

@@ -2,7 +2,7 @@
 use warnings;
 use strict;
 use Cwd 'abs_path';
-use Getopt::Long;
+
 ## usage: fusions-from-star.pl  outputname Chimeric.out.junction  
 
 ##IMPORTANT NOTE!  this calls 'samtools' and 'bedtools' and 'mafft'  please have these installed and in your path under those aliases.  
@@ -19,22 +19,51 @@ use Getopt::Long;
 		# the other issue is that blat/blast don't lend themselves to computational filtering easily.  taking the top hit works ok though.   
 	# filter circular RNA.  It seems to come up quite a bit. 
 
-if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction params.txt \nBe sure to check parameters in fusions-from-star.pl";}
+if (scalar(@ARGV) != 2 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction\nBe sure to check parameters in fusions-from-star.pl";}
 
-##Read in User Parameters (taken from Perl Cookbook "8.16. Reading Configuration Files")
-my %Configs = ();
-open CONFIG, "<$ARGV[2]" or die $!;
-while (<CONFIG>) {
-    chomp;                  # no newline
-    s/#.*//;                # no comments
-    s/^\s+//;               # no leading white
-    s/\s+$//;               # no trailing white
-    next unless length;     # anything left?
-    my ($var, $value) = split(/\s*=\s*/, $_, 2);
-    $Configs{$var} = $value;
-}
 
-#These shouldn't change unless the format of Chimeric.out.junction from star changes:
+#Very adjustable variables (change for your data/needs)
+my $offset = 1; # 0 based or 1 based coordinate system?  UCSC = 0, Ensemble = 1
+my $pairedend =0; #1 means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
+my $consensus ="TRUE";  # anything but TRUE will make this skip the consensus output.
+my $cutoff = 5; # number of minimum read support at jxn.  reccommend keep this above 2 or your run can take a long time.
+my $cutoff2 = 3; # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
+#this cutoff2 value ranges from 1-70 (100bp reads).  Our mapping requires 15bp overhang on a fusion so 84-99 and 0-14 will alwasy be 0 and max.
+#may make sense to scale cutoff2 by the read support for a given fusion.  ie if only 15 reads support it, 20 is impossible.
+my $spancutoff = 0; #minimum number of non-split reads support.  If single end data, this must be 0. 
+my $wiggle = 500 ; #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
+my $overlapLimit = 5; #wiggle room for joining very closely called fusion sites.
+my $samechrom_wiggle = 20000; #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome proximal
+my $lopsidedupper = 5; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
+my $lopsidedlower = 0.2; # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
+my $genome = "hg38" ;#will look for file: data/$genome.abparts.  currently have hg19, hg38, and mm9
+my $cnvwiggle = 1000; #we skip fusions that can be explained by known cnvs.  how close to the edges of the cnv must our fusion be?
+my $circlesize = 100000 ;#we skip fusions that look more like circular rna/backsplices.  how big (bp) could a circle be?    
+
+##Reference Files: MUST be correct paths:
+	# a bed format version of a gtf.  
+#my $refbed="/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed";
+my $refbed="/sc/orga/projects/losicb01a/common_folder/ref/mm10/bed/Mus_musculus.GRCm38.75.gtf.chr.bed";
+	# a bed format list of known repeats
+#my $repeatbed="/sc/orga/work/akersn01/ref/repeats_hg19plus.bed";
+my $repeatbed="/sc/orga/work/akersn01/ref/repeats_hg38plus.bed";
+#my $repeatbed="/sc/orga/projects/JanssenIBD/blosic/DSS_Colon_experiment_T_B_Cell_transfer_models/fusions/Repeats_Class_mm10_09.20.2013.bed";
+
+	# fasta reference.  should be indexed (run 'samtools faidx file.fa')
+my $ref = "/sc/orga/projects/losicb01a/common_folder/ref/hg38/star/GRCh38_Gencode21_overhang100/GCA_000001405.15_GRCh38_no_alt_analysis_set.fa";
+my $ref = "/sc/orga/work/akersn01/ref/star/ENSEMBL.homo_sapiens.release-75_overhang100/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa";
+#my $ref="/sc/orga/projects/PBG/REFERENCES/mm10/tophat/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa";
+#my $ref = "/sc/orga/scratch/akersn01/AAV2/custom_indexHBV/makegenome/custom.hg19.fa";
+
+#my $gtf = "/sc/orga/projects/losicb01a/common_folder/ref/hg19/gtf/gencode.v19.annotation.gtf"; 
+
+#Scoring Parameters (feel free to tweak).
+my $splitscoremod = 10;
+my $spanscoremod = 20;
+my $skewpenalty = 4;
+my $repeatpenalty = 0.5 ; # score = score*(repeatpenalty^repeats)  --> a fusion can have 0,1,or 2 sites fall into repeat regions.
+
+#Adjustable Variables (shouldn't change unless the format of Chimeric.out.junction from star changes:
 my $col_jxntype=6;
 my $col_startposA=10;
 my $col_startposB=12;
@@ -51,9 +80,8 @@ my $col_overlapR=8;
 my $numbcolumns=14; #need this one in case you junciton.out file/input changes.  this should be a non-existant final column (ie Chimeric.junciton.out has 0-13 columns)
 #should fix this to be more robust...
 my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are format: 1,2,X. The script checks your data so you can leave this as zero.
+print "Using the following variables:\nPaired-End: $pairedend\nGenome: $genome\nSplit Reads Cutoff: $cutoff\nUnique Support Values Min: $cutoff2\nSpanning Reads Cutoff: $spancutoff\nLocation Wiggle Room (spanning reads): $wiggle bp\nLocation Wiggle Room (split reads) : $overlapLimit bp\nMin-distance : $samechrom_wiggle bp\nRead Distribution upper limit: $lopsidedupper X\nRead Distribution lower limit: $lopsidedlower X\n";
 
- 
-print "Using the following variables:\nPaired-End: $Configs{pairedend}\nGenome: $Configs{genome}\nSplit Reads Cutoff: $Configs{spanningReads}\nUnique Support Values Min: $Configs{uniqueReads}\nSpanning Reads Cutoff: $Configs{spancutoff}\nLocation Wiggle Room (spanning reads): $Configs{wiggle} bp\nLocation Wiggle Room (split reads) : $Configs{overlapLimit} bp\nMin-distance : $Configs{samechrom_wiggle} bp\nRead Distribution upper limit: $Configs{lopsidedupper} X\nRead Distribution lower limit: $Configs{lopsidedlower} X\n";
 #set variables
 my $linecount=0;
 my $readlength =0;
@@ -64,10 +92,10 @@ my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $troublemakers = $script_dir . 'pseudogenes.txt';
 my $blastscript = $script_dir . 'check-pseudogenes.sh'; 
-my $abpartsfile = $script_dir . 'data/' . $Configs{genome} . '.abparts';
+my $abpartsfile = $script_dir . 'data/' . $genome . '.abparts';
 my $smithwaterman = $script_dir . 'smith_waterman.pl';
 my $sw_matrix = $script_dir . 'data/' . 'sw_scoremat.txt';
-my $cnvfile = $script_dir . 'data/conrad_' . $Configs{genome} . '.cnvs'; 
+my $cnvfile = $script_dir . 'data/conrad_' . $genome . '.cnvs'; 
 
 #file management
 if (length(@ARGV) != 1) { die "Wrong number of arguments!\n";}
@@ -87,7 +115,6 @@ while (<TROUBLE>) {
         $trouble_spots{$gene1} .= exists $trouble_spots{$gene1} ? ",$gene2" : $gene2;
 }
 #index the antibody regions for this genome:
-print "$abpartsfile\n";
 open ABS, "<$abpartsfile" or die $!;
 my @AbParts;
 my $abindex=0; 
@@ -124,8 +151,8 @@ EXITHERE: while (my $x = <JUNCTION>) {
 	next if ($line[$col_chrB] eq "MT");
 	next if ($line[$col_chrA] =~ m/GL*/);
 	next if ($line[$col_chrB] =~ m/GL*/);
-	next if ($line[$col_overlapL] > $Configs{overlapLimit});
-	next if ($line[$col_overlapR] > $Configs{overlapLimit});	
+	next if ($line[$col_overlapL] > $overlapLimit);
+	next if ($line[$col_overlapR] > $overlapLimit);	
 
 #calculate read length (where read length == the length of one pair of the sequencing if paired end)
 	if ($linecount < 1 ) {
@@ -153,7 +180,7 @@ EXITHERE: while (my $x = <JUNCTION>) {
 	}
 #Skip antibody Parts regions: ab files have chr.  so if $chrflag=1, we're ok.
 	if ($chrflag == 1 ) { 
-		foreach my $z (0..$abindex) { #format reminder $AbParts[index][0=lower/1=upper position]{chrom}
+		foreach my $z (0..$abindex) {
 			no warnings 'uninitialized' ; 
                 	if ($AbParts[$z][0]{$line[$col_chrA]} <= $line[$col_FusionposA] && $line[$col_FusionposA] <= $AbParts[$z][1]{$line[$col_chrA]}) {
                         	#print "pos1 match\n";
@@ -247,35 +274,35 @@ my $keycount ;
 for my $key (keys %fusions) {#go through all 'fusions'
 	$keycount++ ;
 	#first filter by read support
-	if ($fusions{$key}[0][0] >=$Configs{spanningReads} && $fusions{$key}[1][0] >=$Configs{spanningReads}) {
+	if ($fusions{$key}[0][0] >=$cutoff && $fusions{$key}[1][0] >=$cutoff) {
                 my @keyarray=split(/__/, $key); #0:chrm1 1:pos 2:chr2 3:pos2 4:strand 5:strand 
                  #skip same-chrom proximal fusions
-		if ($keyarray[0] ~~$keyarray[2] && (abs($keyarray[1]-$keyarray[3])<=$Configs{samechrom_wiggle}) ){
+		if ($keyarray[0] ~~$keyarray[2] && (abs($keyarray[1]-$keyarray[3])<=$samechrom_wiggle) ){
                		next;
                 }
 		#skip lopsided fusions (ie all the read support is on one side)
-		if ( ($fusions{$key}[2][1]+0.1)/($fusions{$key}[2][2]+0.1) >= $Configs{lopsidedupper} || ($fusions{$key}[2][1]+0.1)/($fusions{$key}[2][2]+0.1) <= $Configs{lopsidedlower}) {
+		if ( ($fusions{$key}[2][1]+0.1)/($fusions{$key}[2][2]+0.1) >= $lopsidedupper || ($fusions{$key}[2][1]+0.1)/($fusions{$key}[2][2]+0.1) <= $lopsidedlower) {
 			next;
 		}
 		my $topspancount = $fusions{$key}[2][0];
 		my $bottomspancount = $fusions{$key}[2][5];
 		##now we need to do a broad check for spanning reads that didn't map to the exact fusion location
-		# I do this by doing a rough check for close locations.  This mostly works, but gets messy with larger values of $Configs{wiggle}, and when fusion sites are near each other on the same chromosome.  
+		# I do this by doing a rough check for close locations.  This mostly works, but gets messy with larger values of $wiggle, and when fusion sites are near each other on the same chromosome.  
 		# in those cases, take results with a grain of salt.
-		if ($Configs{pairedend} eq "TRUE") {  
+		if ($pairedend == 1) {  
 			for my $key2 (keys %fusions) { #cycle through all the keys again
 				next if ($key ~~$key2); #skip itself
 				if ($fusions{$key2}[2][0] >= 1 || $fusions{$key2}[2][5] >=1 ) { #we are only really interested in sites with spanning fusions
 					my @key2array=split(/__/, $key2); #see above for indices
-					next if ($key2array[0] ~~$key2array[2] && (abs($key2array[1]-$key2array[3])<=$Configs{samechrom_wiggle}) ); #skip same chrom proximal
-					#check if the fusion from keyarray (has jxn crossing) has the same coordinates (within $Configs{wiggle} bp) as $keyarray2
-					if ($keyarray[4]~~$key2array[4] && $keyarray[5]~~$key2array[5] && $keyarray[0]~~$key2array[0] && $keyarray[2]~~$key2array[2] && (abs($keyarray[1]-$key2array[1])<=$Configs{wiggle}) && (abs($keyarray[3]-$key2array[3])<=$Configs{wiggle}) ) {
+					next if ($key2array[0] ~~$key2array[2] && (abs($key2array[1]-$key2array[3])<=$samechrom_wiggle) ); #skip same chrom proximal
+					#check if the fusion from keyarray (has jxn crossing) has the same coordinates (within $wiggle bp) as $keyarray2
+					if ($keyarray[4]~~$key2array[4] && $keyarray[5]~~$key2array[5] && $keyarray[0]~~$key2array[0] && $keyarray[2]~~$key2array[2] && (abs($keyarray[1]-$key2array[1])<=$wiggle) && (abs($keyarray[3]-$key2array[3])<=$wiggle) ) {
 						#print "1: $key2 spans $key reads: $fusions{$key2}[2][0] sum before: $fusions{$key}[2][0]\n";
 						$topspancount += $fusions{$key2}[2][0];
 						$bottomspancount += $fusions{$key2}[2][5]; 
 					}
 					#check the inverse fusion
-					elsif (&reversestrand($keyarray[4])~~$key2array[5] && &reversestrand($keyarray[5])~~$key2array[4] && $keyarray[0]~~$key2array[2] && $keyarray[2]~~$key2array[0] && (abs($keyarray[1]-$key2array[3])<=$Configs{wiggle}) && (abs($keyarray[3]-$key2array[1])<=$Configs{wiggle}) ) {
+					elsif (&reversestrand($keyarray[4])~~$key2array[5] && &reversestrand($keyarray[5])~~$key2array[4] && $keyarray[0]~~$key2array[2] && $keyarray[2]~~$key2array[0] && (abs($keyarray[1]-$key2array[3])<=$wiggle) && (abs($keyarray[3]-$key2array[1])<=$wiggle) ) {
 						$topspancount += $fusions{$key2}[2][5];
 						$bottomspancount += $fusions{$key2}[2][0];
 						#print "2: $key2 spans $key reads: $fusions{$key2}[2][0] sum before: $fusions{$key}[2][0]\n";
@@ -285,7 +312,7 @@ for my $key (keys %fusions) {#go through all 'fusions'
 		}
 		#Second, filter on spanning read pairs
 		my $spancount = $topspancount + $bottomspancount ; 
-		if ($spancount >= $Configs{spancutoff}) { 
+		if ($spancount >= $spancutoff) { 
 			#next get an estimate of the 'unique reads' mapped by looking at how many unique read support values there are
 			my @array0; my @array1;
 			my $leftanchor ; my $rightanchor; 
@@ -304,11 +331,11 @@ for my $key (keys %fusions) {#go through all 'fusions'
 			for my $x (15..($readlength-16)) { push (@kurtosisarray, $fusions{$key}[1][$x]);}
 			my ($skew, $kurtosis)=&kurtosis(@kurtosisarray); #still calculating kurtosis, but not sure how useful it is.  
 			#filter by the number of these unique reads
-                	if ($unique0 >= $Configs{uniqueReads} && $unique1 >= $Configs{uniqueReads}) {
+                	if ($unique0 >= $cutoff2 && $unique1 >= $cutoff2) {
 				$fusioncounter++;
 				my $position1; my $position2; 
 				my $splitreads = $fusions{$key}[2][1] + $fusions{$key}[2][2] ;
-				if ($Configs{offset} == 1 ) {($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]); }
+				if ($offset == 1 ) {($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]); }
 				else { $position1=$keyarray[1] ; $position2=$keyarray[3]; }
 				#0:split reads, 1:topsidesplit, 2:bottomsidesplit 3:spanreads 4;topspan 5;bottomspan 6:skew 7:chr1 8;loc1 9;strand1 10;chr2; 11;loc2; 12;strand2
 				#print "$splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],,$keyarray[2],$position2,$keyarray[5])\n";
@@ -332,7 +359,7 @@ close (SUMM);
 
 ##Post filter gene-annotation here:
 if ($fusioncounter >0 ) {
-	my $annotate_command = $annotateloc . " " . $outsumm . " " . $Configs{refbed} . " " . $Configs{repeatbed}; 
+	my $annotate_command = $annotateloc . " " . $outsumm . " " . $refbed . " " . $repeatbed; 
 	system($annotate_command); 
 	#should create a file $outsum.annotated with gene annotations.
 	#remove same gene fusions, simplify output
@@ -366,18 +393,18 @@ if ($fusioncounter >0 ) {
 					if ($chrflag == 0) { $chrom1 = "chr" . $chrom1 ; } #cnv file has chr labels
 					#remove circular looking RNA.  If not, widen the fusion positions for the CNV hunt.
 					if ($strand1 eq "-") { 
-						if (($position2 - $position1) < $Configs{circlesize} && ($position2 - $position1) >0) { #ie a back splice
+						if (($position2 - $position1) < $circlesize && ($position2 - $position1) >0) { #ie a back splice
 							print "skipping circle $line[0] $line[1]\n";
 							next EXIT_ANNO_FILTER ;
 						}#if not circular, adjust 
-						my $temp = $position1 - $Configs{cnvwiggle} ; $position1 = $position2 + $Configs{cnvwiggle} ; $position2 = $temp;
+						my $temp = $position1 - $cnvwiggle ; $position1 = $position2 + $cnvwiggle ; $position2 = $temp;
 					}
 					else   { ## ie plus strand
-						if (($position1 - $position2) < $Configs{circlesize} && ($position1 - $position2) > 0) {
+						if (($position1 - $position2) < $circlesize && ($position1 - $position2) > 0) {
 							print "skipping circle $line[0] $line[1]\n";
 							next EXIT_ANNO_FILTER ;
 						} #if not circular, adjust 
-						$position1 = $position1 + $Configs{cnvwiggle}; $position2 = $position2 - $Configs{cnvwiggle};
+						$position1 = $position1 + $cnvwiggle; $position2 = $position2 - $cnvwiggle;
 					}
 					#check the positions for CNV status
 					foreach my $z (0..$cnvindex) { 
@@ -404,13 +431,13 @@ if ($fusioncounter >0 ) {
 			my $alignScore=$line[($indices[0]-4)];
 			#calculate fusion score
 			my $score = $line[2]; 
-			$score = $score*($Configs{repeatpenalty}**$line[($indices[0]-2)]) ;#penalize repeats
+			$score = $score*($repeatpenalty**$line[($indices[0]-2)]) ;#penalize repeats
 			$score = $score*(($alignScore-$minAS)/($rangeAS));   
 			print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq\n";
 		}
 	}
 	#blast output: work in progress
-	#my $blastcmd = "$blastscript $outsumm $gtf $Configs{refFasta}";
+	#my $blastcmd = "$blastscript $outsumm $gtf $ref";
 	#system($blastcmd); 
 }
 else {
@@ -621,30 +648,30 @@ sub extractSequence {
 	if ($chrflag == 1 ) { $chrA =~ s/chr//; }
   ##if +
 	if ($splitseq[4]~~"+") {
-		$seqpos2 = ($splitseq[1]-$Configs{offset});
+		$seqpos2 = ($splitseq[1]-$offset);
 		$seqpos1 = $seqpos2 - $readlength;
 	}
   ##if - 
 	if ($splitseq[4]~~"-") {
-		$seqpos1 = ($splitseq[1]+$Configs{offset});
+		$seqpos1 = ($splitseq[1]+$offset);
 		$seqpos2 = $seqpos1 +$readlength;
 	}
-	my $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
+	my $cmdA = "samtools faidx $ref '$chrA:$seqpos1-$seqpos2'";
 ##Right side sequence
 	my $seqBpos1 ; my $seqBpos2; 
 	my $chrB = $splitseq[2]; 
 	if ($chrflag == 1 ) { $chrB =~ s/chr//;}
   ##if + 
 	if ($splitseq[5] ~~ "+") {
-		$seqBpos1 = ($splitseq[3]+$Configs{offset});
+		$seqBpos1 = ($splitseq[3]+$offset);
 		$seqBpos2 = $seqBpos1 + $readlength ; 
 	}
   ##if -
 	if ($splitseq[5] ~~ "-") {
-		$seqBpos2 = ($splitseq[3]-$Configs{offset});
+		$seqBpos2 = ($splitseq[3]-$offset);
 		$seqBpos1 = $seqBpos2 - $readlength;
 	}
-	my $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
+	my $cmdB = "samtools faidx $ref '$chrB:$seqBpos1-$seqBpos2'";
 	#print "$cmdA\n$cmdB\n";
 ##collect REference fasta with samtools
 	my @fastaA=`$cmdA`;
@@ -681,7 +708,7 @@ sub extractSequence {
         }
 	else { print SUMM "$sequenceB\t"; $refseq = join("", $refseq, $sequenceB); }
 ##obtain the consensus sequence from the reads themselves
-	if ($Configs{consensus} eq "TRUE"){
+	if ($consensus eq "TRUE"){
 		my $tempID = int(rand(10000000)); 
 		#consensus command is : ~/scripts/fusions/consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
 		my $consensuscmd = "$consensusloc '$splitseq[0]' $splitseq[1] '$splitseq[2]' $splitseq[3] $junction $sam $tempID $refseq $script_dir";
@@ -711,27 +738,27 @@ sub extractSequence {
 	#This time I want the 10bp on either side of the fusion site from both sites.
         ##if +
         if ($splitseq[4]~~"+") {
-                $seqpos2 = ($splitseq[1]-$Configs{offset}+10);
+                $seqpos2 = ($splitseq[1]-$offset+10);
                 $seqpos1 = $seqpos2 - 20;
         }
         ##if - 
         if ($splitseq[4]~~"-") {
-                $seqpos1 = ($splitseq[1]+$Configs{offset}-10);
+                $seqpos1 = ($splitseq[1]+$offset-10);
                 $seqpos2 = $seqpos1 +20;
         }
-        $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
+        $cmdA = "samtools faidx $ref '$chrA:$seqpos1-$seqpos2'";
      ##right side
         ##if + 
         if ($splitseq[5] ~~ "+") {
-                $seqBpos1 = ($splitseq[3]+$Configs{offset}-10);
+                $seqBpos1 = ($splitseq[3]+$offset-10);
                 $seqBpos2 = $seqBpos1 + 20 ;
         }
         ##if -
         if ($splitseq[5] ~~ "-") {
-                $seqBpos2 = ($splitseq[3]-$Configs{offset}+10);
+                $seqBpos2 = ($splitseq[3]-$offset+10);
                 $seqBpos1 = $seqBpos2 - 20;
         }
-        $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
+        $cmdB = "samtools faidx $ref '$chrB:$seqBpos1-$seqBpos2'";
 	#run the commands
 	#print "$cmdA\n$cmdB\n";
 	@fastaA=`$cmdA`;
@@ -855,9 +882,9 @@ sub fusionScore {
 		$spanscore = $params[3]/(($params[4]+1)/($params[5]+1));
 	}
 	else { $spanscore = $params[3]/(($params[5]+1)/($params[4]+1)); }
-	my $basescore = $splitscore/$Configs{splitscoremod} + $spanscore/$Configs{spanscoremod} ; 
+	my $basescore = $splitscore/$splitscoremod + $spanscore/$spanscoremod ; 
 	#Skew Penalty
-	if ($params[6] >=0.25 ) { $basescore = $basescore*$Configs{skewpenalty}; }	
+	if ($params[6] >=0.25 ) { $basescore = $basescore*$skewpenalty; }	
 	#Read-through penalty 
 	if ($params[7] eq $params[10] && $params[9] eq $params[12] ) {
 		my $dist = abs($params[8] - $params[11]);
