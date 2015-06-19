@@ -13,7 +13,7 @@ Currently, there are two main modules, which need to be run separately.
 
 Usage:
 
-	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out
+	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out Parameters.txt
 	
 		This will output to the directory from which the script is run. 
 
@@ -24,7 +24,8 @@ Softare Dependencies:
 	mafft
 
 Files Needed:
-
+	
+	parameters file (examples included in /starchimp/fusions/paramfiles )
 	reference_fasta_file (indexed with samtools)
 	reference gtf file in .bed format
 	repetative elements in .bed format
@@ -36,7 +37,8 @@ Output:
 
 Known Issues:
 
-	Fusions are really tricky.  This still has a high false positive rate, picking up circular RNA and paralogues/pseudogenes. 
+	Fusions are really tricky.  This still has a high false positive rate, due to short overhangs and  paralogues/pseudogenes. 
+	A good second step is to BLAST/BLAT your fusion consensus sequence, especially to the newest genome assembly available. 
 	In the future I'll implement BLAST on-the-fly to check that fusion partners don't share sequence similarity. 
 
 
