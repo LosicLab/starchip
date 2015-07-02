@@ -53,7 +53,7 @@ my $numbcolumns=14; #need this one in case you junciton.out file/input changes. 
 my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are format: 1,2,X. The script checks your data so you can leave this as zero.
 
  
-print "Using the following variables:\nPaired-End: $Configs{pairedend}\nGenome: $Configs{genome}\nSplit Reads Cutoff: $Configs{spanningReads}\nUnique Support Values Min: $Configs{uniqueReads}\nSpanning Reads Cutoff: $Configs{spancutoff}\nLocation Wiggle Room (spanning reads): $Configs{wiggle} bp\nLocation Wiggle Room (split reads) : $Configs{overlapLimit} bp\nMin-distance : $Configs{samechrom_wiggle} bp\nRead Distribution upper limit: $Configs{lopsidedupper} X\nRead Distribution lower limit: $Configs{lopsidedlower} X\n";
+print "Using the following variables:\nPaired-End: $Configs{pairedend}\nGenome: $Configs{genome}\nSplit Reads Cutoff: $Configs{splitReads}\nUnique Support Values Min: $Configs{uniqueReads}\nSpanning Reads Cutoff: $Configs{spancutoff}\nLocation Wiggle Room (spanning reads): $Configs{wiggle} bp\nLocation Wiggle Room (split reads) : $Configs{overlapLimit} bp\nMin-distance : $Configs{samechrom_wiggle} bp\nRead Distribution upper limit: $Configs{lopsidedupper} X\nRead Distribution lower limit: $Configs{lopsidedlower} X\n";
 #set variables
 my $linecount=0;
 my $readlength =0;
@@ -62,6 +62,7 @@ my $script_dir=abs_path($0);
 $script_dir =~ s/fusions-from-star.pl//;
 my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
+my $familyfile = $script_dir . 'data/ensfams.txt';
 my $troublemakers = $script_dir . 'pseudogenes.txt';
 my $blastscript = $script_dir . 'check-pseudogenes.sh'; 
 my $abpartsfile = $script_dir . 'data/' . $Configs{genome} . '.abparts';
@@ -73,21 +74,34 @@ my $cnvfile = $script_dir . 'data/conrad_' . $Configs{genome} . '.cnvs';
 if (length(@ARGV) != 1) { die "Wrong number of arguments!\n";}
 my $outbase = $ARGV[0];
 my $outsumm = $outbase . ".summary";
+my $outsummtemp = $outsumm . ".temp";
+my $outannotemp = $outsummtemp . ".annotated" ;
+my $outanno = $outsumm . ".annotated";
 print "your final outputs will be in $outsumm and $outsumm.annotated\n";
 my $junction = $ARGV[1];
 my $sam = $junction;
 $sam =~ s/junction$/sam/ ; 
-
+#create a hash of ensembl family members, these are common FP
+open FAMILY, "<$familyfile" or die "opening $familyfile: $!"; 
+my %famhash;
+while (<FAMILY>) {
+	chomp;
+	my ($family, $gene) = split /\s+/;
+	if (exists $famhash{$gene}) { $famhash{$gene} .= ",$family"; }
+	else { $famhash{$gene} = $family; }
+	#$famhash{$gene} .= exists $famhash{$gene} ? ",$family" : $family;
+}
 #create a hash of known pseudogenes---loci that consistantly show FP fusions. 
 open TROUBLE, "<$troublemakers" or die "opening $troublemakers: $!";
 my %trouble_spots;
 while (<TROUBLE>) {
         chomp;
         my ($gene1, $gene2) = split /\s+/;
-        $trouble_spots{$gene1} .= exists $trouble_spots{$gene1} ? ",$gene2" : $gene2;
+        if (exists $trouble_spots{$gene1}) { $trouble_spots{$gene1} .= ",$gene2";}
+	else { $trouble_spots{$gene1} = "$gene2";}
+	# $trouble_spots{$gene1} .= exists $trouble_spots{$gene1} ? ",$gene2" : $gene2;
 }
 #index the antibody regions for this genome:
-print "$abpartsfile\n";
 open ABS, "<$abpartsfile" or die $!;
 my @AbParts;
 my $abindex=0; 
@@ -239,15 +253,15 @@ close(JUNCTION);
 ##it's somewhat confusing, but I think the output is most understandable this way.  
 #SETUP
 my $fusioncounter =0;
-open (SUMM, ">$outsumm") or die; 
-print SUMM "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tReferenceSeq\tConsensusSeq\tAvgAlnScore\n";
+open (SUMMTEMP, ">$outsummtemp") or die; 
+print SUMMTEMP "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\n";
 my $keycount ;
 
 #Join and Evaluate Fusions
 for my $key (keys %fusions) {#go through all 'fusions'
 	$keycount++ ;
 	#first filter by read support
-	if ($fusions{$key}[0][0] >=$Configs{spanningReads} && $fusions{$key}[1][0] >=$Configs{spanningReads}) {
+	if ($fusions{$key}[0][0] >=$Configs{splitReads} && $fusions{$key}[1][0] >=$Configs{splitReads}) {
                 my @keyarray=split(/__/, $key); #0:chrm1 1:pos 2:chr2 3:pos2 4:strand 5:strand 
                  #skip same-chrom proximal fusions
 		if ($keyarray[0] ~~$keyarray[2] && (abs($keyarray[1]-$keyarray[3])<=$Configs{samechrom_wiggle}) ){
@@ -316,39 +330,39 @@ for my $key (keys %fusions) {#go through all 'fusions'
 				
 				##Output. This can be changed as needed, but the first two columns need to be chr1:pos:str.  They are fed into coordinates2genes.sh for gene annotation later.  
 				if ($chrflag == 0 ) {
-					print SUMM "chr$keyarray[0]:$position1:$keyarray[4]\tchr$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\t";
+					print SUMMTEMP "chr$keyarray[0]:$position1:$keyarray[4]\tchr$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\n";
 				}
 				else {
-					print SUMM "$keyarray[0]:$position1:$keyarray[4]\t$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\t";
+					print SUMMTEMP "$keyarray[0]:$position1:$keyarray[4]\t$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\n";
 				}
-				&extractSequence($key);	
 				print "Filtered fusions count:$fusioncounter, searched $keycount\n";
 			}
 		}
 	}
 }
 print "Total fusions found: $fusioncounter\nNow Annotating these Fusions and filtering based on annotations\n";
-close (SUMM);
+close (SUMMTEMP);
 
 ##Post filter gene-annotation here:
 if ($fusioncounter >0 ) {
-	my $annotate_command = $annotateloc . " " . $outsumm . " " . $Configs{refbed} . " " . $Configs{repeatbed}; 
+	my $annotate_command = $annotateloc . " " . $outsummtemp . " " . $Configs{refbed} . " " . $Configs{repeatbed}; 
 	system($annotate_command); 
-	#should create a file $outsum.annotated with gene annotations.
+	#should create a file $outsumtemp.annotated with gene annotations.
 	#remove same gene fusions, simplify output
-	my $outanno = $outsumm . ".annotated" ; 
-	open ANNOTATED, "$outanno" or die $!;
-	open (SUMM, ">$outsumm") or die;
-
+	open ANNOTEMP, "<$outannotemp" or die $!;
+	open SUMM, ">$outsumm" or die $!;
+	open ANNOTATION, ">$outanno" or die $!; 
 	print SUMM "Partner1\tPartner2\tScore\tDiscordantReads\tSplitReads\tAvgAS\tNearGene1\tDistance1\tNearGene2\tDistance2\tConsensusSeq\n";
+	print ANNOTATION "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tRepeats\tID1\tGeneInfo1\tDistance1\tID2\tGeneInfo2\tDistance2\tReferenceSequence\tConsensusSequence\tAvgAlignScore\n";
 	my $maxAS= $readlength/2;
 	my $minAS= ($readlength-20)/2; #this 20 is a changeable star parameter
 	my $rangeAS= $maxAS-$minAS;
-	EXIT_ANNO_FILTER: while (my $x = <ANNOTATED>) {
+	EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
+		chomp $x; 
         	my @line=split(/\s+/, $x);
 		my $cols = scalar(@line);
         	my @geneannot=grep(/gene_id/, @line);
-		#indices stores the positions of gene_id in .annotated.  # repeats is 1 less, #alignments score is 3 less.  For perl indexes, these become -2 and -4.
+		#indices stores the positions of gene_id in .annotated.  # repeats is 1 less (than indices[0], #alignments score is 3 less.  For perl indexes, these become -2 and -4.
 		my @indices=grep{ $line[$_] =~ /gene_id/ } 0..$#line ; 
 		if (@geneannot) {
 			my @anno1=split(/;/, $geneannot[0]);
@@ -396,17 +410,34 @@ if ($fusioncounter >0 ) {
 			my $dist2 = $line[($cols-1)]; my $dist1 = $line[($cols-4)];
 			$gene1name[0] =~ s/gene_name:// ; $gene1name[0] =~ s/"//g ;  
 			$gene2name[0] =~ s/gene_name:// ; $gene2name[0] =~ s/"//g ;
+			# check that the partners aren't family members:
+		        my @intersection;
+			no warnings 'uninitialized'; 
+			my @gene1fams = split (/,/, $famhash{$gene1name[0]}); my @gene2fams = split (/,/, $famhash{$gene2name[0]});
+		        my %count = ();
+	        	foreach my $element (@gene1fams, @gene2fams) { $count{$element}++ }
+		        	foreach my $element (keys %count) {
+       				if ($count{$element} > 1) {
+					print "skipping known family members $gene1name[0] and $gene2name[0] in family $element with $count{$element} count\n"; next EXIT_ANNO_FILTER;
+				}
+		        }
 			#use a hash to eliminate known pseudogene 'fusions' 
 			no warnings 'uninitialized';
-                	if (($trouble_spots{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($trouble_spots{$gene2name[0]} =~ m/$gene1name[0]/)) { next; }
+                	if (($trouble_spots{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($trouble_spots{$gene2name[0]} =~ m/$gene1name[0]/)) { print "skipping known false positive pair $gene1name[0] and $gene2name[0]\n" ; next; }
 			#pull out consensus sequence and alignment score
-			my $consSeq=$line[($indices[0]-4)];
-			my $alignScore=$line[($indices[0]-4)];
 			#calculate fusion score
-			my $score = $line[2]; 
+			my ($refseq, $consSeq, $alignScore) = &extractSequence($line[0], $line[1]);
+			my $score = $line[2];
 			$score = $score*($Configs{repeatpenalty}**$line[($indices[0]-2)]) ;#penalize repeats
 			$score = $score*(($alignScore-$minAS)/($rangeAS));   
-			print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq\n";
+			print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq";
+			print ANNOTATION "$x\t$refseq\t$consSeq\t$alignScore";
+			#get consensus sequence
+			if ($Configs{simscore} eq 'TRUE') {
+				&SIMSCORE($line[0], $line[1]);
+			}
+			print SUMM "\n";
+			print ANNOTATION "\n"; 
 		}
 	}
 	#blast output: work in progress
@@ -416,6 +447,10 @@ if ($fusioncounter >0 ) {
 else {
 	open (SUMM, ">$outsumm") or die;
 }
+#cleanup
+my $cleanupcmd = "rm $outsummtemp $outannotemp";
+system($cleanupcmd); 
+
 
 
 ### BEGIN SUBROUTINES ###
@@ -612,41 +647,50 @@ sub supportCigar { #input: SJ line
         } 
 }
 sub extractSequence {
-	#print SUMM ">$_[0]\n";
-	my @splitseq = split(/__/, $_[0]);#0:chrm1 1:pos 2:chr2 3:pos2 4:strandA 5:strandB
+	#input is format chr:pos:+ chr:pos:-
+	my ($chrA, $posA, $strandA) = split(/:/, $_[0]); # (/__/, $_[0]);#0:chrm1 1:pos 2:chr2 3:pos2 4:strandA 5:strandB
+	my ($chrB, $posB, $strandB) = split(/:/, $_[1]);
+	#print "chrA $chrA posA $posA strandA $strandA chrb $chrB posb $posB strandb $strandB \n";
 ###obtain the REFERENCE sequence based on positions.
 ##Left side sequence
 	my $seqpos1; my $seqpos2;
-	my $chrA = $splitseq[0]; 
-	if ($chrflag == 1 ) { $chrA =~ s/chr//; }
+	#my $chrA = $splitseq[0]; 
+	#if ($chrflag == 1 ) { $chrA =~ s/^chr//; }
+	$chrA =~ s/^chr//;
   ##if +
-	if ($splitseq[4]~~"+") {
-		$seqpos2 = ($splitseq[1]-$Configs{offset});
+	if ($strandA~~"+") {
+		#$seqpos2 = ($posA-$Configs{offset});
+		$seqpos2 = $posA ;
 		$seqpos1 = $seqpos2 - $readlength;
 	}
   ##if - 
-	if ($splitseq[4]~~"-") {
-		$seqpos1 = ($splitseq[1]+$Configs{offset});
+	if ($strandA~~"-") {
+		#deleted a line here...
+		$seqpos1 = $posA;
 		$seqpos2 = $seqpos1 +$readlength;
 	}
 	my $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
 ##Right side sequence
 	my $seqBpos1 ; my $seqBpos2; 
-	my $chrB = $splitseq[2]; 
-	if ($chrflag == 1 ) { $chrB =~ s/chr//;}
+	#my $chrB = $splitseq[2]; 
+	#if ($chrflag == 1 ) { $chrB =~ s/^chr//;}
+	$chrB =~ s/^chr//;
   ##if + 
-	if ($splitseq[5] ~~ "+") {
-		$seqBpos1 = ($splitseq[3]+$Configs{offset});
+	if ($strandB ~~ "+") {
+		#$seqBpos1 = ($posB+$Configs{offset});
+		$seqBpos1 = $posB;
 		$seqBpos2 = $seqBpos1 + $readlength ; 
 	}
   ##if -
-	if ($splitseq[5] ~~ "-") {
-		$seqBpos2 = ($splitseq[3]-$Configs{offset});
+	if ($strandB ~~ "-") {
+		#$seqBpos2 = ($posB-$Configs{offset});
+		$seqBpos2 = $posB;
 		$seqBpos1 = $seqBpos2 - $readlength;
 	}
 	my $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
 	#print "$cmdA\n$cmdB\n";
 ##collect REference fasta with samtools
+	#print "$cmdA\n$cmdB\n";
 	my @fastaA=`$cmdA`;
 	my @fastaB=`$cmdB`;
 	#print "results @fastaB\n";
@@ -668,23 +712,29 @@ sub extractSequence {
                 }
 	}
 	my $refseq; 
-	if ($splitseq[4] ~~ "-") {
+	if ($strandA ~~ "-") {
 		my @reverseA=&revcompl($sequenceA);
 		$refseq = join("", @reverseA);
-		print SUMM "@reverseA";
+		#print ANNOTATION "@reverseA";
 	}
-	else { print SUMM "$sequenceA"; $refseq = $sequenceA; }
-	if ($splitseq[5] ~~ "-") {
+	else { #print ANNOTATION "$sequenceA"; 
+		$refseq = $sequenceA; 
+	}
+	if ($strandB ~~ "-") {
                 my @reverseB=&revcompl($sequenceB);
 		$refseq = join("", $refseq, @reverseB); 
-                print SUMM "@reverseB\t";
+                #print ANNOTATION "@reverseB\t";
         }
-	else { print SUMM "$sequenceB\t"; $refseq = join("", $refseq, $sequenceB); }
+	else { #print ANNOTATION "$sequenceB\t"; 
+		$refseq = join("", $refseq, $sequenceB); 
+	}
 ##obtain the consensus sequence from the reads themselves
 	if ($Configs{consensus} eq "TRUE"){
 		my $tempID = int(rand(10000000)); 
-		#consensus command is : ~/scripts/fusions/consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
-		my $consensuscmd = "$consensusloc '$splitseq[0]' $splitseq[1] '$splitseq[2]' $splitseq[3] $junction $sam $tempID $refseq $script_dir";
+		my ($unadjposA, $unadjposB) = &unadjustposition($posA, $strandA, $posB, $strandB); 
+		#consensus command is : consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
+		my $consensuscmd = "$consensusloc '$chrA' $unadjposA '$chrB' $unadjposB $junction $sam $tempID $refseq $script_dir";
+		##print "$consensuscmd\n";
 		my @consResults=`$consensuscmd`; 
 		my $consensusSeq=$consResults[0];
 		chomp $consensusSeq;
@@ -700,45 +750,63 @@ sub extractSequence {
  		#}
 		#$consensusSeq =~ s/^n+//;
 		if ($consensusSeq ne ""){
-			print SUMM "$consensusSeq\t$avgAS\t";		
+			#print SUMM "$consensusSeq\t$avgAS\t";		
+			#print ANNOTATION "$consensusSeq\t$avgAS\t";
+			return ($refseq, $consensusSeq, $avgAS);		
 		}
-		else { print SUMM".\t$avgAS\t"; }
+		else { 
+			return ($refseq, ".", $avgAS); 
+			#print SUMM ".\t$avgAS\t"; }
+			#print ANNOTATION ".\t$avgAS\t"; 
+		}
 	}
+}
+sub SIMSCORE { #input is format chr:pos:+ chr:pos:-
+        my ($chrA, $posA, $strandA) = split(/:/, $_[0]); 
+        my ($chrB, $posB, $strandB) = split(/:/, $_[1]); 
+	$chrA =~ s/^chr//;
+	$chrB =~ s/^chr//;
+	my $seqpos1; my $seqpos2;
+	my $seqBpos1; my $seqBpos2;
 #check fusion site sequence similarity
 	my $tempID = int(rand(10000000));
 	my $seqfasta = $tempID . ".fa";
 	open (FASTA, ">$seqfasta") or die $!; 
 	#This time I want the 10bp on either side of the fusion site from both sites.
         ##if +
-        if ($splitseq[4]~~"+") {
-                $seqpos2 = ($splitseq[1]-$Configs{offset}+10);
+        if ($strandA~~"+") {
+                #$seqpos2 = ($posA-$Configs{offset}+10);
+                $seqpos2 = ($posA+10);
                 $seqpos1 = $seqpos2 - 20;
         }
         ##if - 
-        if ($splitseq[4]~~"-") {
-                $seqpos1 = ($splitseq[1]+$Configs{offset}-10);
+        if ($strandA~~"-") {
+                #$seqpos1 = ($posA+$Configs{offset}-10);
+                $seqpos1 = ($posA-10);
                 $seqpos2 = $seqpos1 +20;
         }
-        $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
+	my $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
      ##right side
         ##if + 
-        if ($splitseq[5] ~~ "+") {
-                $seqBpos1 = ($splitseq[3]+$Configs{offset}-10);
+        if ($strandB ~~ "+") {
+                #$seqBpos1 = ($posB+$Configs{offset}-10);
+                $seqBpos1 = ($posB-10);
                 $seqBpos2 = $seqBpos1 + 20 ;
         }
         ##if -
-        if ($splitseq[5] ~~ "-") {
-                $seqBpos2 = ($splitseq[3]-$Configs{offset}+10);
+        if ($strandB ~~ "-") {
+                #$seqBpos2 = ($posB-$Configs{offset}+10);
+                $seqBpos2 = ($posB+10);
                 $seqBpos1 = $seqBpos2 - 20;
         }
-        $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
+        my $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
 	#run the commands
 	#print "$cmdA\n$cmdB\n";
-	@fastaA=`$cmdA`;
-        @fastaB=`$cmdB`;
+	my @fastaA=`$cmdA`;
+        my @fastaB=`$cmdB`;
 	#if neg strand, reverse comp.  otherwise print to fa file. 
-	$sequenceA = "";
-	$sequenceB = "";
+	my $sequenceA = "";
+	my $sequenceB = "";
 	while (@fastaA) {
         	my $x = shift(@fastaA);
                 chomp $x ;
@@ -753,20 +821,20 @@ sub extractSequence {
                         $sequenceB .=$x ;
                 }
         }
-        if ($splitseq[4] ~~ "-") {
+        if ($strandA ~~ "-") {
                 my @reverseA=&revcompl($sequenceA);
 		print FASTA ">seq1\n";
 		print FASTA "@reverseA\n";
         }
         else { print FASTA ">seq1\n$sequenceA\n"; }
-        if ($splitseq[5] ~~ "-") {
+        if ($strandB ~~ "-") {
                 my @reverseB=&revcompl($sequenceB);
 		print FASTA ">seq2\n@reverseB\n";
         }
         else { print FASTA ">seq2\n$sequenceB\n"; }
 	my $sw_command = "$smithwaterman $sw_matrix $seqfasta";
 	my $alignscore = `$sw_command`;
-	print SUMM "SIMSCORE:$alignscore\n";
+	print ANNOTATION "\tSIMSCORE:$alignscore";
 	my $rm_fasta_cmd = "rm $seqfasta";
 	system($rm_fasta_cmd);
 }
@@ -806,6 +874,24 @@ sub adjustposition { #takes in 0pos, 1strand, 2pos 3strand
 		$position2 = $_[2] -1;
 	}
 	return ($position1, $position2); 
+}
+sub unadjustposition { #reverse the effect of adjustposition
+	#takes in 0pos, 1strand, 2pos 3strand
+	my $position1;
+        my $position2;
+        if ($_[1] ~~ "+") {
+                $position1 = $_[0] +1;
+        }
+        elsif ($_[1] ~~ "-") {
+                $position1 = $_[0] -1;
+        }
+        if ($_[3] ~~ "+") {
+                $position2 = $_[2] -1;
+        }
+        elsif ($_[3] ~~ "-") {
+                $position2 = $_[2] +1;
+        }
+        return ($position1, $position2);
 }
 
 #credit: http://www.bagley.org/~doug/shootout/  slash http://dada.perl.it/shootout/moments.perl.html

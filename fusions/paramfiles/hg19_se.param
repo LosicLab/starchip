@@ -5,10 +5,11 @@
 offset = 1   # 0 based or 1 based coordinate system?  UCSC = 0, Ensemble = 1
 pairedend = NO  #TRUE means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
 consensus = TRUE  	# anything but TRUE will make this skip the consensus sequence generation for each fusion.
+simscore = NO         #anything but TRUE will skip similarity score testing.  In my experience this feature isn't that helpful.
 
 ## Filters, Cutoffs 
 
-spanningReads = 10 # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time.   
+splitReads = 10 # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time.   
 uniqueReads = 6 # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
 spancutoff = 0 #minimum number of non-split reads support.  If single end data, this must be 0. 
 wiggle = 500  #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
