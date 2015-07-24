@@ -19,7 +19,7 @@ use Getopt::Long;
 		# the other issue is that blat/blast don't lend themselves to computational filtering easily.  taking the top hit works ok though.   
 	# filter circular RNA.  It seems to come up quite a bit. 
 
-if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction params.txt \nBe sure to check parameters in fusions-from-star.pl";}
+if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction params.txt \n Be sure you have samtools, bedtools, and mafft available.\n";}
 
 ##Read in User Parameters (taken from Perl Cookbook "8.16. Reading Configuration Files")
 my %Configs = ();
