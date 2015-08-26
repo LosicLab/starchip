@@ -21,3 +21,5 @@ else
 	cut -f1,8,10 $myprefix | awk '{ if ($2 >= $3) print $1,$2,$3 ; else print $1,$3,$2 } ' OFS="\t" |sort |uniq |awk '{print $1,$2"\n"$1,$3}' OFS="\t" |cut -f2 | sort |uniq -c |sort -gr > ${myprefix}.genecount_uniqpairs
 	cut -f1,8,10 $myprefix | awk '{ if ($2 >= $3) print $1,$2,$3 ; else print $1,$3,$2 } ' OFS="\t" |sort |uniq |awk '{print $1,$2"\n"$1,$3}' OFS="\t" |sort | uniq | cut -f2 | sort |uniq -c |sort -gr > ${myprefix}.genecount_uniqinds
 fi
+
+#while read line ; do gene=`echo $line | awk '{ print $2}'` ; echo -ne $gene"\t";  grep -w -- $gene hcc.summary |cut -f1 |sort |uniq |wc -l |tr "\n" "\t";  grep -w -- $gene ci.summary |cut -f1 |sort |uniq |wc -l |tr "\n" " " ; echo ""; done < all.genecount_uniqpairs > fusions.genes.counts

@@ -3,23 +3,55 @@
 #gtfbed=/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed
 gtfbed=$2
 repeatbed=$3
-
-# this was written for fusion files that start like this: chr2:135252043:-	chr10:70243177:+
-# modify as needed, so long as the end result is from the first two lines here is a bed format file.
-tail -n +2 $1 | cut -f1 |sed 's/:/\t/g' |awk '{ print $1,($2-1),($2+1),$1":"$2":"$3 }' |tr " " "\t" >${1}.p1.bed
-tail -n +2 $1 | cut -f2 |sed 's/:/\t/g' |awk '{ print $1,($2-1),($2+1),$1":"$2":"$3 }' |tr " " "\t" >${1}.p2.bed
+genomefile=`echo $gtfbed |sed 's/.bed$/.genome/'`
+# this was written for fusion files that start like this: chr2:135252043:-      chr10:70243177:+
+# turn coordinates into a sorted bed file.
+tail -n +2 $1 | cut -f1,2 |tr "\t" "\n" |sed 's/:/\t/g' |awk '{ print $1,($2-1),($2+1),$1":"$2":"$3 }' |tr " " "\t" | sort -k1,1 -k2,2n -k3,3n >${1}.p1.bed
 #gene annotation
-bedtools closest -t first -D b -a ${1}.p1.bed -b $gtfbed |cut -f4,8,13> ${1}.p1.anno
-bedtools closest -t first -D b -a ${1}.p2.bed -b $gtfbed |cut -f4,8,13> ${1}.p2.anno
+bedtools closest -g $genomefile -t first -D b -a ${1}.p1.bed -b $gtfbed |cut -f4,8,13> ${1}.p1.anno
 #repeats
-bedtools intersect -a ${1}.p1.bed -b $repeatbed -c |cut -f5 > ${1}.p1.rep
-bedtools intersect -a ${1}.p2.bed -b $repeatbed -c |cut -f5 > ${1}.p2.rep
-paste ${1}.p1.rep ${1}.p2.rep |awk '{ if ($1>0 && $2>0) print "2" ; else if ($1 >0 || $2 >0) print "1" ; else print "0"}' >${1}.repeats
+bedtools intersect -sorted -a ${1}.p1.bed -b $repeatbed -c |cut -f4,5 > ${1}.p1.rep
+
+#header management:
+tail -n +2 $1 > ${1}.headerless
+head -n 1 $1 > ${1}.annotated
+
+#now we have gene annotations in the .anno file, and repeat counts in the .rep file. 
+# use grep to join fusion partners back to the same line.
+while read line ; do
+	linearray=(${line/\t/ / })
+	coord1=${linearray[0]}
+	coord2=${linearray[1]}
+	#all grep calls have -m 1 which tells grep to stop after one match.
+	#find the number of repeats for each partner (0 or 1), sum them. 
+	#echo "running fgrep -m 1 $coord1 ${1}.p1.rep "
+	coord1repgrep=$(fgrep -m 1 $coord1 ${1}.p1.rep |awk '{print $2}' )
+	#echo "coord1repgrep is "$coord1repgrep
+	coord2repgrep=$(fgrep -m 1 $coord2 ${1}.p1.rep |awk '{print $2}' )
+	let "repeatssum = $coord1repgrep + $coord2repgrep"
+	#assign gene annotations to vars. 
+	coord1genegrep=$(fgrep -m 1 $coord1 ${1}.p1.anno )
+        if  [[ $? -eq  0 ]] ; then 
+       	        gene1anno=$coord1genegrep
+        else
+        	gene1anno="${coord1}\tgene_name:\"NoGene\"\tNA"
+        fi
+	coord2genegrep=$(fgrep -m 1 $coord2 ${1}.p1.anno )
+        if  [[ $? -eq  0 ]] ; then 
+                gene2anno=$coord2genegrep
+        else
+                gene2anno="${coord2}\tgene_name:\"NoGene\"\tNA"
+        fi
+	gene1anno2=`echo $gene1anno | sed 's/\s\.\s-1/\tgene_name:NoGene\tNA/' `
+	gene2anno2=`echo $gene2anno | sed 's/\s\.\s-1/\tgene_name:NoGene\tNA/' `
+	echo -e $line"\t"$repeatsum"\t"$gene1anno2"\t"$gene2anno2
+done < ${1}.headerless  | tr " " "\t" >> ${1}.annotated
+
 #clean up
-sed -i -e "1i\Repeats" ${1}.repeats
-sed -i -e "1i\ID\tGeneInfo\tDistance" ${1}.p1.anno
-sed -i -e "1i\ID\tGeneInfo\tDistance" ${1}.p2.anno
-paste $1 ${1}.repeats >${1}.temp0
-paste ${1}.temp0 ${1}.p1.anno > ${1}.temp
-paste ${1}.temp ${1}.p2.anno > ${1}.annotated
-rm ${1}.p1.bed ${1}.p2.bed ${1}.p1.anno ${1}.p2.anno ${1}.temp ${1}.p1.rep ${1}.p2.rep ${1}.repeats ${1}.temp0
+
+sed -i -e '1 s/$/\tRepeats\tPartner1\tP1GeneInfo\tP1GeneDistance\tPartner2\tP2GeneInfo\tP2GeneDistance/' ${1}.annotated
+rm ${1}.p1.bed ${1}.p1.anno ${1}.p1.rep ${1}.headerless
+
+
+#output looks like:
+# chr2:135252043:-      chr10:70243177:+  ANYTHINGELSE	numbRepeats	p1	p1GeneInfo	p1genedist	p2	p2GeneInfo	p2genedist

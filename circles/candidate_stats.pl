@@ -54,18 +54,18 @@ while (my $cRNA=<CANDIDATES>) {
 				$jxntype = $hitsplit[10];
 				$overlapL = $hitsplit[11];
 				$overlapR = $hitsplit[12];
-				push (@spliceinfo, "$hitsplit[17]_$hitsplit[25]_$hitsplit[26]_$hitsplit[27]");
+				push (@spliceinfo, "$hitsplit[18]_$hitsplit[26]_$hitsplit[27]_$hitsplit[28]");
 				push (@medianAS, $hitsplit[13]);
-				push (@splicedsizes, $hitsplit[17]);
-				push (@leftIntrons, $hitsplit[18]);
-				push (@rightIntrons, $hitsplit[19]);
-				push (@leftEnvDist, $hitsplit[20]);
-				push (@rightEnvDist, $hitsplit[21]);
-				push (@envStrand, $hitsplit[23]);
-				push (@envJxn, $hitsplit[24]);
-				push (@exons, $hitsplit[25]);
-				push (@exonstarts, $hitsplit[26]);
-				push (@exonsizes, $hitsplit[27]);
+				push (@splicedsizes, $hitsplit[18]);
+				push (@leftIntrons, $hitsplit[19]);
+				push (@rightIntrons, $hitsplit[20]);
+				push (@leftEnvDist, $hitsplit[21]);
+				push (@rightEnvDist, $hitsplit[22]);
+				push (@envStrand, $hitsplit[24]);
+				push (@envJxn, $hitsplit[25]);
+				push (@exons, $hitsplit[26]);
+				push (@exonstarts, $hitsplit[27]);
+				push (@exonsizes, $hitsplit[28]);
 			}
 		#print "$files[$f]\n";
 		}
@@ -163,7 +163,7 @@ while (my $cRNA=<CANDIDATES>) {
 		$splicesize2 += $_;
 	}
 	if ($splicesize2 != $splicemax ){
-		print "warning: for cRNA:$cRNAarray[0]\t$cRNAarray[2]\t$cRNAarray[1] there was a splicing error.";
+		print "warning: for cRNA:$cRNAarray[0]\t$cRNAarray[2]\t$cRNAarray[1] there was a splicing error. $splicesize2 != $splicemax. $hitsplit[28] @hitsplit \n";
 	}  
 	#die;
 }

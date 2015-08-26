@@ -21,7 +21,7 @@ minSubjLimit=${2}
 #How many reads for a subject to express a cRNA species? To look at multiple thresholds, modify the line below to something like: cutofflist=( 1 3 5 10 100)
 cutofflist=${1}
 #How many CPUs do we have?
-cpus=8
+cpus=4
 #CPM thresholds
 cpmcutoff=0
 subjectcpm=0
