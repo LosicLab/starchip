@@ -656,7 +656,7 @@ sub extractSequence {
 	my $seqpos1; my $seqpos2;
 	#my $chrA = $splitseq[0]; 
 	#if ($chrflag == 1 ) { $chrA =~ s/^chr//; }
-	$chrA =~ s/^chr//;
+	#$chrA =~ s/^chr//;
   ##if +
 	if ($strandA~~"+") {
 		#$seqpos2 = ($posA-$Configs{offset});
@@ -674,7 +674,7 @@ sub extractSequence {
 	my $seqBpos1 ; my $seqBpos2; 
 	#my $chrB = $splitseq[2]; 
 	#if ($chrflag == 1 ) { $chrB =~ s/^chr//;}
-	$chrB =~ s/^chr//;
+	#$chrB =~ s/^chr//;
   ##if + 
 	if ($strandB ~~ "+") {
 		#$seqBpos1 = ($posB+$Configs{offset});
