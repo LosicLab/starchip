@@ -1,6 +1,6 @@
 starchimp
 ==========
-starchimp is short for Star Chimeric Post, written by Kipp Akers.  
+starchimp is short for Star Chimeric Post, written by Kipp Akers as part of his work in Bojan Losic's group at the Icahn Institute of Genomics and Multiscale Biology of Mount Sinai.   
 
 This software is designed to take the chimeric output from the STAR alignment tool and discover high confidence fusions and circular RNA in the data. 
 Before running, you must have used a recent version of STAR with chimeric output turned on, to align your RNA-Seq data.
