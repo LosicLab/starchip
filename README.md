@@ -13,7 +13,7 @@ Currently, there are two main modules, which need to be run separately.
 
 Usage:
 
-	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out Parameters.txt
+	/path/to/starchimp/fusions/fusions-from-star.pl output_seed Chimeric.junction.out Parameters.txt
 	
 		This will output to the directory from which the script is run. 
 
@@ -49,10 +49,10 @@ Circular RNA is not poly-A modified, so generally data from poly-T amplified RNA
 
 Usage:
 
-	/path/to/StarChimPo/circles/circle_star.sh [Reads_threshold] [Subjects_threshold] star_dirs.txt [splice/nosplice]
+	/path/to/starchimp/circles/circle_star.sh [Reads_threshold] [Subjects_threshold] star_dirs.txt [splice/nosplice]
 
-		[Reads_threshold] is the minimum read support required for a circleRNA.  I.e. 5
-		[Subjects_threshold] is the minimum subjects support required I.e. 2
+		[Reads_threshold] is the minimum read support required for a circleRNA.  e.g. 5
+		[Subjects_threshold] is the minimum subjects support required e.g. 2
 		Where star_dirs.txt is a file with the full path to a star output directory on each line.  These should be distinctive directories.  Ie /path/to/star_subject1_run1/  
 		the 4th argument should be the word 'splice' or 'nosplice' .  splice will cause the software to run splice analysis, generating information about the likely splices within each cRNA. This can take significant time. 
 		This will output to the directory from which the script is run. 
@@ -77,4 +77,4 @@ Output:
 
 Known issues:
 
-	Haven't really dug into how well this utilizes paired-end data
+	
