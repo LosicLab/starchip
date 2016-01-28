@@ -5,23 +5,36 @@ use warnings;
 # usage: chimera-score.pl star_output_dir filter_script.pl
 #  Generally output is piped into filter_circs_v3.pl
 
-$dir=$ARGV[0];
-$sam = $dir . "Chimeric.out.sam";
-$junctions = $dir . "Chimeric.out.junction";
+$dir=$ARGV[0];  #my star data dir
+my $prefix=$ARGV[1]; 
+if ($prefix eq "NoPrefix123456789"){
+	$prefix="";
+}
+$sam = $dir . $prefix . "Chimeric.out.sam";
+$junctions = $dir . $prefix . "Chimeric.out.junction";
+my $uniqIDindex_stepsback = $ARGV[2]; 
+
+
 $readcount=0;
 $junctionline=0;
-#print "$junctions\n $sam\n";
+#print "$junctions\n$sam\n";
 
 #store chimeric.out.junction into memory
 open (JUNCTIONS, "< $junctions") or die $!;
 	@chimeric_out_junctions=<JUNCTIONS>;
 close JUNCTIONS or die $!;
 
-$tempfile=$dir;
-$tempfile =~ s/\/$//;
-$tempfile =~ s/.*\///;
-$uniqID = $tempfile; 
-$tempfile = $tempfile . ".temp";
+#$tempfile=$dir;
+#$tempfile =~ s/\/$//;
+#$tempfile =~ s/.*\///;
+#$uniqID = $tempfile; 
+#$tempfile = $tempfile . ".temp";
+
+my @dirArray = split(/\//, $dir); 
+my $uniqIDindex = $#dirArray - $uniqIDindex_stepsback + 1 ; 
+my $uniqID = $dirArray[$uniqIDindex];
+
+my $tempfile = "rawdata/" . $uniqID . ".temp" ; 
 open (TEMPOUT, ">$tempfile") or die $!; 
 
 open (SAM, "< $sam") or die $!;
@@ -70,7 +83,7 @@ close TEMPOUT;
 # sort the tempfile and pipe it into filter circs. 
 my $cmd1 = 'sort -k1,1 -k2,2n -k5,5n -k6,6 ';
 $cmd1 = $cmd1 . $tempfile ; 
-my $cmd2 = $ARGV[1] . " " . $uniqID ;
+my $cmd2 = $ARGV[3] . " " . $uniqID ;
 system("$cmd1 | $cmd2 "); 
 $remove_temp='rm ' . $tempfile ; 
 system("$remove_temp") ;
@@ -95,12 +108,19 @@ sub junc_filter
 			chomp $chimeric_out_junctions[$junctionline];
 			#create an aggregate of both cigars to pass on
 			my $cigar=$split[11] . "Z" . $split[13] ; 
+			my $position1;
+			my $position2; 
 			if ($split[2] eq "+") {
-	                        print TEMPOUT "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\t$cigar\n"; #print the junctions.out line + the score
-        		} #I choose to always print the highest? position first to more easily keep track.  
+				$position1 = $split[4]; 
+				$position2 = $split[1]; 
+	                        #print TEMPOUT "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\t$cigar\n"; #print the junctions.out line + the score
+        		} #I choose to always print the lowest position first to more easily keep track.  
 			else {
-	                        print TEMPOUT "$split[0]\t$split[4]\t$split[2]\t$split[3]\t$split[1]\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\t$cigar\n"; #print the junctions.out line + the score
+				$position1 = $split[1]; 
+				$position2 = $split[4]; 
+	                        #print TEMPOUT "$split[0]\t$split[4]\t$split[2]\t$split[3]\t$split[1]\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\t$cigar\n"; #print the junctions.out line + the score
 			}
+			print TEMPOUT "$split[0]\t$position1\t$split[2]\t$split[3]\t$position2\t$split[5]\t$split[6]\t$split[7]\t$split[8]\t$_[1]\t$cigar\n"; #print the junctions.out line + the score
 	
         }
 	$junctionline++;

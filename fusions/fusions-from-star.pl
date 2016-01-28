@@ -3,13 +3,12 @@ use warnings;
 use strict;
 use Cwd 'abs_path';
 use Getopt::Long;
+use File::Basename;
 ## usage: fusions-from-star.pl  outputname Chimeric.out.junction  
 
 ##IMPORTANT NOTE!  this calls 'samtools' and 'bedtools' and 'mafft'  please have these installed and in your path under those aliases.  
 	#It shouldn't crash without them, but you will get error messages rather than some of the outputs.
-	#$ module load samtools bedtools 
-	# ^ should do the trick for the first two, but you'll need to obtain mafft. 
-# the goal of this program is to take a file of potential fusions from STAR (Chimeric.out.tab), and determine the read distribution around the fusion.
+	#$ On MSSM/minerva you can just do: module load starchimp
 
 # to do:    
 	# blat/blast output.  blat is REALLY slow, and because of mem loading, probably faster if run in batches.  
@@ -17,13 +16,13 @@ use Getopt::Long;
 		# run all blat at once.
 		# $ blat t=dna q=rna /path/to/database /path/to/query 
 		# the other issue is that blat/blast don't lend themselves to computational filtering easily.  taking the top hit works ok though.   
-	# filter circular RNA.  It seems to come up quite a bit. 
 
 if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction params.txt \n Be sure you have samtools, bedtools, and mafft available.\n";}
 
 ##Read in User Parameters (taken from Perl Cookbook "8.16. Reading Configuration Files")
 my %Configs = ();
-open CONFIG, "<$ARGV[2]" or die $!;
+my $configfile = $ARGV[2]; 
+open CONFIG, "<$configfile" or die $!;
 while (<CONFIG>) {
     chomp;                  # no newline
     s/#.*//;                # no comments
@@ -50,16 +49,14 @@ my $col_overlapL=7;
 my $col_overlapR=8;
 my $numbcolumns=14; #need this one in case you junciton.out file/input changes.  this should be a non-existant final column (ie Chimeric.junciton.out has 0-13 columns)
 #should fix this to be more robust...
-my $chrflag=0; #1: chromosomes are format: chr1,chr2,chrX  0:chromosomes are format: 1,2,X. The script checks your data so you can leave this as zero.
 
  
-print "Using the following variables:\nPaired-End: $Configs{pairedend}\nGenome: $Configs{genome}\nSplit Reads Cutoff: $Configs{splitReads}\nUnique Support Values Min: $Configs{uniqueReads}\nSpanning Reads Cutoff: $Configs{spancutoff}\nLocation Wiggle Room (spanning reads): $Configs{wiggle} bp\nLocation Wiggle Room (split reads) : $Configs{overlapLimit} bp\nMin-distance : $Configs{samechrom_wiggle} bp\nRead Distribution upper limit: $Configs{lopsidedupper} X\nRead Distribution lower limit: $Configs{lopsidedlower} X\n";
 #set variables
 my $linecount=0;
 my $readlength =0;
 my %fusions =();
 my $script_dir=abs_path($0);
-$script_dir =~ s/fusions-from-star.pl//;
+$script_dir =~ s/fusions-from-star2.pl//;
 my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $familyfile = $script_dir . 'data/ensfams.txt';
@@ -77,50 +74,56 @@ my $outsumm = $outbase . ".summary";
 my $outsummtemp = $outsumm . ".temp";
 my $outannotemp = $outsummtemp . ".annotated" ;
 my $outanno = $outsumm . ".annotated";
-print "your final outputs will be in $outsumm and $outsumm.annotated\n";
 my $junction = $ARGV[1];
 my $sam = $junction;
-$sam =~ s/junction$/sam/ ; 
-#create a hash of ensembl family members, these are common FP
-open FAMILY, "<$familyfile" or die "opening $familyfile: $!"; 
-my %famhash;
-while (<FAMILY>) {
-	chomp;
-	my ($family, $gene) = split /\s+/;
-	if (exists $famhash{$gene}) { $famhash{$gene} .= ",$family"; }
-	else { $famhash{$gene} = $family; }
-	#$famhash{$gene} .= exists $famhash{$gene} ? ",$family" : $family;
-}
-#create a hash of known pseudogenes---loci that consistantly show FP fusions. 
-open TROUBLE, "<$troublemakers" or die "opening $troublemakers: $!";
-my %trouble_spots;
-while (<TROUBLE>) {
-        chomp;
-        my ($gene1, $gene2) = split /\s+/;
-        if (exists $trouble_spots{$gene1}) { $trouble_spots{$gene1} .= ",$gene2";}
-	else { $trouble_spots{$gene1} = "$gene2";}
-	# $trouble_spots{$gene1} .= exists $trouble_spots{$gene1} ? ",$gene2" : $gene2;
-}
+$sam =~ s/junction$/sam/ ;
+my $starbase = $junction ;
+$starbase =~ s/Chimeric.out.junction//;    
+
 #index the antibody regions for this genome:
 open ABS, "<$abpartsfile" or die $!;
 my @AbParts;
 my $abindex=0; 
 while (my $x = <ABS>) {
+	$x =~ s/^chr// ; #we strip out chr beginings to make everything line up ok. 
         my @line = split(/\s+/, $x); #AbParts lines are formatted: chrm pos1 pos2
         $AbParts[$abindex][0]{$line[0]} = $line[1]; ##data format: $AbParts[index][0=lower/1=upper position]{chrom}
         $AbParts[$abindex][1]{$line[0]} = $line[2]; ##data format: $AbParts[index][0=lower/1=upper position]{chrom}
         $abindex++;
 }
-open CNVS, "<$cnvfile" or die $!; 
-my @cnvlocs;
-my $cnvindex = 0;
-while (my $x = <CNVS>) {
-	my @line = split(/\s+/, $x);
-	#cnv lines are formatted: chrm pos1 pos2
-        $cnvlocs[$abindex][0]{$line[0]} = $line[1]; ##data format: $AbParts[index][0=lower/1=upper position]{chrom}
-        $cnvlocs[$abindex][1]{$line[0]} = $line[2]; ##data format: $AbParts[index][0=lower/1=upper position]{chrom}
-        $cnvindex++;
-}
+
+### AUTOMATIC THRESHOLDING 
+#determine the number of uniquely mapped reads
+my $logfinalout = $starbase . "Log.final.out" ;
+open LOGFINAL, "<$logfinalout" or die "cannot open $logfinalout\n";
+my @loglines = <LOGFINAL> ;
+my @uniqreadcount = grep(/Uniquely mapped reads number/, @loglines);
+my ($trashtext, $readcount) = split(/\|/, $uniqreadcount[0]);
+$readcount =~ s/^\s+|\s+$//g; #strip whitespace
+
+if ( lc $Configs{"splitReads"} eq "auto" ) {
+	print "Performing Automatic Threshold Targeting For Split Reads\n";
+	my $cutoff = $readcount / 10000000 ; 
+	$cutoff = sprintf "%.0f", $cutoff;
+	if ($cutoff < 0 ) { die "Error Calculating read based cutoffs. STAR output Log.final.out reports $readcount reads\n" }
+	if ($cutoff == 0 ) { $cutoff++; }
+	print "Uniquly Mapped Reads:$readcount\nSelected Cutoff: $cutoff\n";
+	$Configs{splitReads} = $cutoff;  
+}  
+##do the same for spanning reads
+if ( lc $Configs{"spancutoff"} eq "auto" ) {EXITER:{
+        print "Performing Automatic Threshold Targeting For Spanning Read (PAIRED END DATA) \n";
+	if ( lc $Configs{"pairedend"} ne "true" ) { $Configs{spancutoff} =0; print "Paired-End config not set to TRUE, setting limits for single-end data\n" ; last EXITER;} 
+        my $cutoff = $readcount / 7500000 ;
+	#this choice of reads/7.5M is very arbitrary.  The ratio of split/span reads should be a function of:
+	#read length and fragment/insert length.  
+        $cutoff = sprintf "%.0f", $cutoff;
+        if ($cutoff < 0	) { die	"Error Calculating read based cutoffs. STAR output Log.final.out reports $readcount reads\n" }
+        if ($cutoff == 0 ) { $cutoff++;	}
+        print "Uniquly Mapped Reads:$readcount\nSelected Cutoff: $cutoff\n";
+        $Configs{spancutoff} = $cutoff;	 
+} }
+print "\nUsing the following variables:\nPaired-End: $Configs{pairedend}\nGenome: $Configs{genome}\nSplit Reads Cutoff: $Configs{splitReads}\nUnique Support Values Min: $Configs{uniqueReads}\nSpanning Reads Cutoff: $Configs{spancutoff}\nLocation Wiggle Room (spanning reads): $Configs{wiggle} bp\nLocation Wiggle Room (split reads) : $Configs{overlapLimit} bp\nMin-distance : $Configs{samechrom_wiggle} bp\nRead Distribution upper limit: $Configs{lopsidedupper} X\nRead Distribution lower limit: $Configs{lopsidedlower} X\n";
 
 # primary data format; $chr1_pos1_chr2_pos2_strandA_strandB[0/1/2][0-RL]
 	#where strand is + or -
@@ -143,7 +146,6 @@ EXITHERE: while (my $x = <JUNCTION>) {
 
 #calculate read length (where read length == the length of one pair of the sequencing if paired end)
 	if ($linecount < 1 ) {
-		if ($line[$col_chrA] =~ /chr/ ) { print "Format appears to be chr1 chr2 etc\n" ; $chrflag = 1; }
 		my $cigarA=$line[$col_cigarA];
 		my $cigarB=$line[$col_cigarB];
 		my $lengthA = &splitCigar($cigarA);
@@ -165,40 +167,24 @@ EXITHERE: while (my $x = <JUNCTION>) {
 			$linecount=-1;
 		}
 	}
-#Skip antibody Parts regions: ab files have chr.  so if $chrflag=1, we're ok.
-	if ($chrflag == 1 ) { 
-		foreach my $z (0..$abindex) { #format reminder $AbParts[index][0=lower/1=upper position]{chrom}
-			no warnings 'uninitialized' ; 
-                	if ($AbParts[$z][0]{$line[$col_chrA]} <= $line[$col_FusionposA] && $line[$col_FusionposA] <= $AbParts[$z][1]{$line[$col_chrA]}) {
-                        	#print "pos1 match\n";
-	                        foreach	my $y (0..$abindex) {
-        	                        if ($AbParts[$y][0]{$line[$col_chrB]} <= $line[$col_FusionposB] && $line[$col_FusionposB]<= $AbParts[$y][1]{$line[$col_chrB]}) {
-                        	                #print "Skipping $line[$col_chrA]:$line[$col_FusionposA] $line[$col_chrB]:$line[$col_FusionposB]";
-                	                        next EXITHERE;
-	                                }
-        	                }
-                	}
-        	}
-	}
-	elsif ($chrflag == 0 ) {
-		my $chrA = "chr" . $line[$col_chrA] ; 
-		my $chrB = "chr" . $line[$col_chrB];
-                foreach my $z (0..$abindex) {
-                        no warnings 'uninitialized' ;
-                        if ($AbParts[$z][0]{$chrA} <= $line[$col_FusionposA] && $line[$col_FusionposA] <= $AbParts[$z][1]{$chrA}) {
-                                #print "pos1 match\n";
-                                foreach my $y (0..$abindex) {
-                                        if ($AbParts[$y][0]{$chrB} <= $line[$col_FusionposB] && $line[$col_FusionposB]<= $AbParts[$y][1]{$chrB}) {
-                                                #print "Skipping $line[$col_chrA]:$line[$col_FusionposA] $line[$col_chrB]:$line[$col_FusionposB]";
-                                                next EXITHERE;
-                                        }
+#Skip antibody Parts regions: ab files have chr stripped if they have it.  so i'll strip it from the reads here. 
+	my $chrA = $line[$col_chrA] ; 
+	my $chrB = $line[$col_chrB] ;
+	$chrA =~ s/^chr//; $chrB =~ s/^chr// ;  
+        foreach my $z (0..$abindex) {
+                no warnings 'uninitialized' ;
+                if ($AbParts[$z][0]{$chrA} <= $line[$col_FusionposA] && $line[$col_FusionposA] <= $AbParts[$z][1]{$chrA}) {
+                        #print "pos1 match\n";
+                        foreach my $y (0..$abindex) {
+                                if ($AbParts[$y][0]{$chrB} <= $line[$col_FusionposB] && $line[$col_FusionposB]<= $AbParts[$y][1]{$chrB}) {
+                                        #print "Skipping $line[$col_chrA]:$line[$col_FusionposA] $line[$col_chrB]:$line[$col_FusionposB]";
+                                        next EXITHERE;
                                 }
                         }
                 }
         }
-
-
-#Create two 'names' and check if they exist.  Checking the written + reverse allows us to collapse reads on opposite strands  
+	
+#Create two 'names' and check if they exist.  Checking the written + reverse allows us to collapse reads on opposite strands
 	my $fusionname=$line[$col_chrA] . "__" . $line[$col_FusionposA] . "__" . $line[$col_chrB] . "__" . $line[$col_FusionposB] . "__" . $line[$col_strandA] . "__" . $line[$col_strandB] ; 
 	my $invStrandA = &reversestrand($line[$col_strandA]);
 	my $invStrandB = &reversestrand($line[$col_strandB]);
@@ -211,10 +197,10 @@ EXITHERE: while (my $x = <JUNCTION>) {
 	}
 	elsif (exists $fusions{$fusionnameInv}) {
 	  #because this is the reverse compliment of the already indexed read, we'll feed in a rearranged line from Chimeric.out.junction, with the strands flipped.
-		my $chrA=$line[$col_chrB];
+		$chrA=$line[$col_chrB];
 		my $posA=$line[$col_FusionposB];
 		my $strandA = &reversestrand($line[$col_strandB]); 
-		my $chrB=$line[$col_chrA];
+		$chrB=$line[$col_chrA];
 		my $posB=$line[$col_FusionposA];
 		my $strandB = &reversestrand($line[$col_strandA]);
 		#6 7,8,9 unchanged/unimportant here
@@ -247,7 +233,6 @@ EXITHERE: while (my $x = <JUNCTION>) {
 my $numbkeys = scalar keys %fusions;
 print "Finished catologing fusion reads, now processing over $numbkeys\n";
 close(JUNCTION);
-
 ##Post Processing and Filtering
 ##currently, the process goes: create file.summary this file gets annotated (file.summary.annotated), and then this annotated file gets filtered and reduced to a new file, named file.summary
 ##it's somewhat confusing, but I think the output is most understandable this way.  
@@ -322,134 +307,21 @@ for my $key (keys %fusions) {#go through all 'fusions'
 				$fusioncounter++;
 				my $position1; my $position2; 
 				my $splitreads = $fusions{$key}[2][1] + $fusions{$key}[2][2] ;
-				if ($Configs{offset} == 1 ) {($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]); }
-				else { $position1=$keyarray[1] ; $position2=$keyarray[3]; }
+				# STAR outputs in columns 2,4 the 1st base of the intron around a fusion site.  I think the 1st base that we see is more intuitive.  So here I adjust.  
+				($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]);
 				#0:split reads, 1:topsidesplit, 2:bottomsidesplit 3:spanreads 4;topspan 5;bottomspan 6:skew 7:chr1 8;loc1 9;strand1 10;chr2; 11;loc2; 12;strand2
 				#print "$splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],,$keyarray[2],$position2,$keyarray[5])\n";
 				my $score = &fusionScore($splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],$keyarray[2],$position2,$keyarray[5]);
 				
 				##Output. This can be changed as needed, but the first two columns need to be chr1:pos:str.  They are fed into coordinates2genes.sh for gene annotation later.  
-				if ($chrflag == 0 ) {
-					print SUMMTEMP "chr$keyarray[0]:$position1:$keyarray[4]\tchr$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\n";
-				}
-				else {
-					print SUMMTEMP "$keyarray[0]:$position1:$keyarray[4]\t$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\n";
-				}
+				print SUMMTEMP "$keyarray[0]:$position1:$keyarray[4]\t$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\n";
 				print "Filtered fusions count:$fusioncounter, searched $keycount\n";
 			}
 		}
 	}
 }
-print "Total fusions found: $fusioncounter\nNow Annotating these Fusions and filtering based on annotations\n";
+print "Total fusions passing read thresholds found: $fusioncounter\nThese fusions will now be filtered based on annotations\n";
 close (SUMMTEMP);
-
-##Post filter gene-annotation here:
-if ($fusioncounter >0 ) {
-	my $annotate_command = $annotateloc . " " . $outsummtemp . " " . $Configs{refbed} . " " . $Configs{repeatbed}; 
-	system($annotate_command); 
-	#should create a file $outsumtemp.annotated with gene annotations.
-	#remove same gene fusions, simplify output
-	open ANNOTEMP, "<$outannotemp" or die $!;
-	open SUMM, ">$outsumm" or die $!;
-	open ANNOTATION, ">$outanno" or die $!; 
-	print SUMM "Partner1\tPartner2\tScore\tDiscordantReads\tSplitReads\tAvgAS\tNearGene1\tDistance1\tNearGene2\tDistance2\tConsensusSeq\n";
-	print ANNOTATION "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tRepeats\tID1\tGeneInfo1\tDistance1\tID2\tGeneInfo2\tDistance2\tReferenceSequence\tConsensusSequence\tAvgAlignScore\n";
-	my $maxAS= $readlength/2;
-	my $minAS= ($readlength-20)/2; #this 20 is a changeable star parameter
-	my $rangeAS= $maxAS-$minAS;
-	EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
-		chomp $x; 
-        	my @line=split(/\s+/, $x);
-		my $cols = scalar(@line);
-        	my @geneannot=grep(/gene_id/, @line);
-		#indices stores the positions of gene_id in .annotated.  # repeats is 1 less (than indices[0], #alignments score is 3 less.  For perl indexes, these become -2 and -4.
-		my @indices=grep{ $line[$_] =~ /gene_id/ } 0..$#line ; 
-		if (@geneannot) {
-			my @anno1=split(/;/, $geneannot[0]);
-       			my @anno2=split(/;/, $geneannot[1]);
-		        my @gene1name=grep(/gene_name/, @anno1);
-        		my @gene2name=grep(/gene_name/, @anno2);
-		        #skip same-gene 'fusions'
-			if ($gene1name[0] eq $gene2name[0]) {
-        	    	    next;  }
-			#skip CNVs and circular-looking
-			my ($chrom1, $position1, $strand1 ) = split ':', $line[0] ; $chrom1 =~ s/:.*//;  
-			my ($chrom2, $position2, $strand2 ) = split ':', $line[1] ; $chrom2 =~ s/:.*//;  
-			if ($chrom1 ~~ $chrom2) { #same chrom
-				if ($strand1 ~~ $strand2) { #same strand
-					if ($chrflag == 0) { $chrom1 = "chr" . $chrom1 ; } #cnv file has chr labels
-					#remove circular looking RNA.  If not, widen the fusion positions for the CNV hunt.
-					if ($strand1 eq "-") { 
-						if (($position2 - $position1) < $Configs{circlesize} && ($position2 - $position1) >0) { #ie a back splice
-							print "skipping circle $line[0] $line[1]\n";
-							next EXIT_ANNO_FILTER ;
-						}#if not circular, adjust 
-						my $temp = $position1 - $Configs{cnvwiggle} ; $position1 = $position2 + $Configs{cnvwiggle} ; $position2 = $temp;
-					}
-					else   { ## ie plus strand
-						if (($position1 - $position2) < $Configs{circlesize} && ($position1 - $position2) > 0) {
-							print "skipping circle $line[0] $line[1]\n";
-							next EXIT_ANNO_FILTER ;
-						} #if not circular, adjust 
-						$position1 = $position1 + $Configs{cnvwiggle}; $position2 = $position2 - $Configs{cnvwiggle};
-					}
-					#check the positions for CNV status
-					foreach my $z (0..$cnvindex) { 
-	                 			no warnings 'uninitialized' ;# if positions 1 and 2 are within the CNV. 
-		                	        if ($cnvlocs[$z][0]{$chrom1} <= $position1 && $position1 <= $cnvlocs[$z][1]{$line[$col_chrA]}) {
-                                			if ($cnvlocs[$z][0]{$chrom1} <= $position2 && $position2 <= $cnvlocs[$z][1]{$chrom1}) {
-		                                                print "skipping CNV $line[0] $line[1]\n";
-								next EXIT_ANNO_FILTER;
-	                		               	}
-		                	        }
-                			}
-				}
-			}
-				
-			#define gene names/distances
-			my $dist2 = $line[($cols-1)]; my $dist1 = $line[($cols-4)];
-			$gene1name[0] =~ s/gene_name:// ; $gene1name[0] =~ s/"//g ;  
-			$gene2name[0] =~ s/gene_name:// ; $gene2name[0] =~ s/"//g ;
-			# check that the partners aren't family members:
-		        my @intersection;
-			no warnings 'uninitialized'; 
-			my @gene1fams = split (/,/, $famhash{$gene1name[0]}); my @gene2fams = split (/,/, $famhash{$gene2name[0]});
-		        my %count = ();
-	        	foreach my $element (@gene1fams, @gene2fams) { $count{$element}++ }
-		        	foreach my $element (keys %count) {
-       				if ($count{$element} > 1) {
-					print "skipping known family members $gene1name[0] and $gene2name[0] in family $element with $count{$element} count\n"; next EXIT_ANNO_FILTER;
-				}
-		        }
-			#use a hash to eliminate known pseudogene 'fusions' 
-			no warnings 'uninitialized';
-                	if (($trouble_spots{$gene1name[0]} =~ m/$gene2name[0]/ )|| ($trouble_spots{$gene2name[0]} =~ m/$gene1name[0]/)) { print "skipping known false positive pair $gene1name[0] and $gene2name[0]\n" ; next; }
-			#pull out consensus sequence and alignment score
-			#calculate fusion score
-			my ($refseq, $consSeq, $alignScore) = &extractSequence($line[0], $line[1]);
-			my $score = $line[2];
-			$score = $score*($Configs{repeatpenalty}**$line[($indices[0]-2)]) ;#penalize repeats
-			$score = $score*(($alignScore-$minAS)/($rangeAS));   
-			print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq";
-			print ANNOTATION "$x\t$refseq\t$consSeq\t$alignScore";
-			#get consensus sequence
-			if ($Configs{simscore} eq 'TRUE') {
-				&SIMSCORE($line[0], $line[1]);
-			}
-			print SUMM "\n";
-			print ANNOTATION "\n"; 
-		}
-	}
-	#blast output: work in progress
-	#my $blastcmd = "$blastscript $outsumm $gtf $Configs{refFasta}";
-	#system($blastcmd); 
-}
-else {
-	open (SUMM, ">$outsumm") or die;
-}
-#cleanup
-my $cleanupcmd = "rm $outsummtemp $outannotemp";
-system($cleanupcmd); 
 
 
 
@@ -645,198 +517,6 @@ sub supportCigar { #input: SJ line
                         }
                 }
         } 
-}
-sub extractSequence {
-	#input is format chr:pos:+ chr:pos:-
-	my ($chrA, $posA, $strandA) = split(/:/, $_[0]); # (/__/, $_[0]);#0:chrm1 1:pos 2:chr2 3:pos2 4:strandA 5:strandB
-	my ($chrB, $posB, $strandB) = split(/:/, $_[1]);
-	#print "chrA $chrA posA $posA strandA $strandA chrb $chrB posb $posB strandb $strandB \n";
-###obtain the REFERENCE sequence based on positions.
-##Left side sequence
-	my $seqpos1; my $seqpos2;
-	#my $chrA = $splitseq[0]; 
-	#if ($chrflag == 1 ) { $chrA =~ s/^chr//; }
-	#$chrA =~ s/^chr//;
-  ##if +
-	if ($strandA~~"+") {
-		#$seqpos2 = ($posA-$Configs{offset});
-		$seqpos2 = $posA ;
-		$seqpos1 = $seqpos2 - $readlength;
-	}
-  ##if - 
-	if ($strandA~~"-") {
-		#deleted a line here...
-		$seqpos1 = $posA;
-		$seqpos2 = $seqpos1 +$readlength;
-	}
-	my $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
-##Right side sequence
-	my $seqBpos1 ; my $seqBpos2; 
-	#my $chrB = $splitseq[2]; 
-	#if ($chrflag == 1 ) { $chrB =~ s/^chr//;}
-	#$chrB =~ s/^chr//;
-  ##if + 
-	if ($strandB ~~ "+") {
-		#$seqBpos1 = ($posB+$Configs{offset});
-		$seqBpos1 = $posB;
-		$seqBpos2 = $seqBpos1 + $readlength ; 
-	}
-  ##if -
-	if ($strandB ~~ "-") {
-		#$seqBpos2 = ($posB-$Configs{offset});
-		$seqBpos2 = $posB;
-		$seqBpos1 = $seqBpos2 - $readlength;
-	}
-	my $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
-	#print "$cmdA\n$cmdB\n";
-##collect REference fasta with samtools
-	#print "$cmdA\n$cmdB\n";
-	my @fastaA=`$cmdA`;
-	my @fastaB=`$cmdB`;
-	#print "results @fastaB\n";
-	my $sequenceA;
-	my $sequenceB;
-  ## FASTA-->string of sequence
-	while (@fastaA) {
-		my $x = shift(@fastaA);
-		chomp $x ;
-		if ($x =~ m/^[actgACTG]/) {
-			$sequenceA .=$x ;
-		}
-	}
-	while (@fastaB) {
-		my $x = shift(@fastaB);
-		chomp $x ;
-		if ($x =~ m/^[actgACTG]/) {
-                        $sequenceB .=$x ;
-                }
-	}
-	my $refseq; 
-	if ($strandA ~~ "-") {
-		my @reverseA=&revcompl($sequenceA);
-		$refseq = join("", @reverseA);
-		#print ANNOTATION "@reverseA";
-	}
-	else { #print ANNOTATION "$sequenceA"; 
-		$refseq = $sequenceA; 
-	}
-	if ($strandB ~~ "-") {
-                my @reverseB=&revcompl($sequenceB);
-		$refseq = join("", $refseq, @reverseB); 
-                #print ANNOTATION "@reverseB\t";
-        }
-	else { #print ANNOTATION "$sequenceB\t"; 
-		$refseq = join("", $refseq, $sequenceB); 
-	}
-##obtain the consensus sequence from the reads themselves
-	if ($Configs{consensus} eq "TRUE"){
-		my $tempID = int(rand(10000000)); 
-		my ($unadjposA, $unadjposB) = &unadjustposition($posA, $strandA, $posB, $strandB); 
-		#consensus command is : consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
-		my $consensuscmd = "$consensusloc '$chrA' $unadjposA '$chrB' $unadjposB $junction $sam $tempID $refseq $script_dir";
-		##print "$consensuscmd\n";
-		my @consResults=`$consensuscmd`; 
-		my $consensusSeq=$consResults[0];
-		chomp $consensusSeq;
-		my $avgAS=$consResults[1];
-		chomp $avgAS;
-		$avgAS = sprintf "%.1f", $avgAS ; 
-		#@while (@consfastq) {
-		#	my $x = shift(@consfastq);
-		#	chomp $x;
-		#	next if ($x =~ m/^@/); #skip readID
-		#	last if ($x =~ m/^\+/); #stop after reads
-		#	$consensusSeq .= $x;
- 		#}
-		#$consensusSeq =~ s/^n+//;
-		if ($consensusSeq ne ""){
-			#print SUMM "$consensusSeq\t$avgAS\t";		
-			#print ANNOTATION "$consensusSeq\t$avgAS\t";
-			return ($refseq, $consensusSeq, $avgAS);		
-		}
-		else { 
-			return ($refseq, ".", $avgAS); 
-			#print SUMM ".\t$avgAS\t"; }
-			#print ANNOTATION ".\t$avgAS\t"; 
-		}
-	}
-}
-sub SIMSCORE { #input is format chr:pos:+ chr:pos:-
-        my ($chrA, $posA, $strandA) = split(/:/, $_[0]); 
-        my ($chrB, $posB, $strandB) = split(/:/, $_[1]); 
-	$chrA =~ s/^chr//;
-	$chrB =~ s/^chr//;
-	my $seqpos1; my $seqpos2;
-	my $seqBpos1; my $seqBpos2;
-#check fusion site sequence similarity
-	my $tempID = int(rand(10000000));
-	my $seqfasta = $tempID . ".fa";
-	open (FASTA, ">$seqfasta") or die $!; 
-	#This time I want the 10bp on either side of the fusion site from both sites.
-        ##if +
-        if ($strandA~~"+") {
-                #$seqpos2 = ($posA-$Configs{offset}+10);
-                $seqpos2 = ($posA+10);
-                $seqpos1 = $seqpos2 - 20;
-        }
-        ##if - 
-        if ($strandA~~"-") {
-                #$seqpos1 = ($posA+$Configs{offset}-10);
-                $seqpos1 = ($posA-10);
-                $seqpos2 = $seqpos1 +20;
-        }
-	my $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
-     ##right side
-        ##if + 
-        if ($strandB ~~ "+") {
-                #$seqBpos1 = ($posB+$Configs{offset}-10);
-                $seqBpos1 = ($posB-10);
-                $seqBpos2 = $seqBpos1 + 20 ;
-        }
-        ##if -
-        if ($strandB ~~ "-") {
-                #$seqBpos2 = ($posB-$Configs{offset}+10);
-                $seqBpos2 = ($posB+10);
-                $seqBpos1 = $seqBpos2 - 20;
-        }
-        my $cmdB = "samtools faidx $Configs{refFasta} '$chrB:$seqBpos1-$seqBpos2'";
-	#run the commands
-	#print "$cmdA\n$cmdB\n";
-	my @fastaA=`$cmdA`;
-        my @fastaB=`$cmdB`;
-	#if neg strand, reverse comp.  otherwise print to fa file. 
-	my $sequenceA = "";
-	my $sequenceB = "";
-	while (@fastaA) {
-        	my $x = shift(@fastaA);
-                chomp $x ;
-                if ($x =~ m/^[actgACTG]/) {
-                        $sequenceA .=$x ;
-                }
-        }
-        while (@fastaB) {
-                my $x = shift(@fastaB);
-                chomp $x ;
-                if ($x =~ m/^[actgACTG]/) {
-                        $sequenceB .=$x ;
-                }
-        }
-        if ($strandA ~~ "-") {
-                my @reverseA=&revcompl($sequenceA);
-		print FASTA ">seq1\n";
-		print FASTA "@reverseA\n";
-        }
-        else { print FASTA ">seq1\n$sequenceA\n"; }
-        if ($strandB ~~ "-") {
-                my @reverseB=&revcompl($sequenceB);
-		print FASTA ">seq2\n@reverseB\n";
-        }
-        else { print FASTA ">seq2\n$sequenceB\n"; }
-	my $sw_command = "$smithwaterman $sw_matrix $seqfasta";
-	my $alignscore = `$sw_command`;
-	print ANNOTATION "\tSIMSCORE:$alignscore";
-	my $rm_fasta_cmd = "rm $seqfasta";
-	system($rm_fasta_cmd);
 }
 sub reversestrand {
 	if ($_[0] ~~ "+"){

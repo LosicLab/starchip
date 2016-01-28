@@ -24,11 +24,11 @@ fgrep -f ${fusionname}.ID ${sam} |cut -f1,6,10 |awk '{if ($2 ~ /S/) print ">"$1"
 avgAS=`fgrep -f ${fusionname}.ID ${sam} |awk '{print $14,$1}' OFS="\t" |sort -k2,2 -k1,1 |uniq -f 1 | cut -f1 | sed 's/AS:i://' | awk '{ total += $1; count++ } END { print total/count }'`
 	#align sequences to ref
 	#razers3 -i 90 -ng -o ${fusionname}.sam ${fusionname}_ref.fa ${fusionname}.fasta
-mafft --reorder --adjustdirection --auto --quiet ${fusionname}.fasta >${fusionname}.msa
+mafft --reorder --adjustdirection --auto --quiet ${fusionname}.fasta >${fusionname}.msa 2> mafft.garbage
 ${script_dir}consensus.pl ${fusionname}.msa
 	#sort aligned reads
 	#samtools view -bS ${fusionname}.sam | samtools sort - ${fusionname}.sorted
 	#generate consensus
 	#samtools mpileup -uf ${fusionname}_ref.fa ${fusionname}.sorted.bam |bcftools view -cg - | vcfutils.pl vcf2fq #> ${fusionname}.consensus
 echo $avgAS
-rm ${fusionname}.ID ${fusionname}.fasta ${fusionname}.msa
+rm ${fusionname}.ID ${fusionname}.fasta ${fusionname}.msa mafft.garbage

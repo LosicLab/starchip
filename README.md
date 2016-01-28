@@ -1,6 +1,6 @@
 starchimp
 ==========
-starchimp is short for Star Chimeric Post, written by Kipp Akers.  
+starchimp is short for Star Chimeric Post, written by Kipp Akers as part of his work in Bojan Losic's group at the Icahn Institute of Genomics and Multiscale Biology at Mount Sinai School of Medicine
 
 This software is designed to take the chimeric output from the STAR alignment tool and discover high confidence fusions and circular RNA in the data. 
 Before running, you must have used a recent version of STAR with chimeric output turned on, to align your RNA-Seq data.
@@ -13,27 +13,28 @@ Currently, there are two main modules, which need to be run separately.
 
 Usage:
 
-	/path/to/StarChimPo/fusions/fusions-from-star.pl output_seed Chimeric.junction.out Parameters.txt
+	/path/to/starchimp/bin/starchimp-fusions.pl output_seed Chimeric.junction.out Parameters.txt
 	
 		This will output to the directory from which the script is run. 
 
 Softare Dependencies:
 
 	samtools
-	bedtools
+	bedtools (>= 2.24.0)
 	mafft
+	star (starchimp doesn't call star, but you do need star output)
 
 Files Needed:
 	
 	parameters file (examples included in /starchimp/fusions/paramfiles )
-	reference_fasta_file (indexed with samtools)
-	reference gtf file in .bed format
-	repetative elements in .bed format
+	Fasta File and GTF File used to generate STAR index 
+	repetative elements/antibody parts regions files in .bed format (included for hg19,hg38)
+	Optional: known gene families and paralogs (included for human)
 
 Output:
 
 	you'll get a *.annotated and a *.annotated.summary file
-	The summary file is further filtered, and is more compact, while the annotated file has more information.  
+	The summary file is more compact, while the annotated file has more information.  
 
 Known Issues:
 
@@ -49,32 +50,35 @@ Circular RNA is not poly-A modified, so generally data from poly-T amplified RNA
 
 Usage:
 
-	/path/to/StarChimPo/circles/circle_star.sh [Reads_threshold] [Subjects_threshold] star_dirs.txt [splice/nosplice]
+	/path/to/starchimp/bin/starchimp-circles.pl star_dirs.txt parameters.txt 
 
-		[Reads_threshold] is the minimum read support required for a circleRNA.  I.e. 5
-		[Subjects_threshold] is the minimum subjects support required I.e. 2
-		Where star_dirs.txt is a file with the full path to a star output directory on each line.  These should be distinctive directories.  Ie /path/to/star_subject1_run1/  
-		the 4th argument should be the word 'splice' or 'nosplice' .  splice will cause the software to run splice analysis, generating information about the likely splices within each cRNA. This can take significant time. 
-		This will output to the directory from which the script is run. 
+	starchimp-circles is designed to work on a set of multiple samples (though it works fine on 1 sample). 
+	star_dirs.txt should have 1 full pathway to star output per line: ie 
+		/path/to/file1/star/
+		/path/to/file2/star/
 
 Software Dependencies:
 	
 	R with the following packages: limma, edgeR
+	bedtools (>=2.24.0)
 
 Files Needed:
 
-	-
-
+	GTF file with the same chromosome naming conventions as your star alignments. 
+	
 Resources:
 
-	The default is to use 4 CPUs.  This can be modified easily in the circle_star.sh script.  Run times vary and scale up with more samples.  Expect at least 1 minute per sample. 
+	starchimp-circles can make use of multiple processors, modifiable in the paramters file.  Run times vary and scale up with more samples.  Expect at least 1 minute per sample. 
 
 Output:
 
-	Count matrix: circRNA.cutoff[readthreshold]reads.[subjectthreshold]ind.countmatrix
-	Info about each circRNA:  Circs[reads].[subjects].spliced.consensus
-	There are other files as well, but they are mostly useful only if you need to really dig into the data. 
+	Count matrixes : 
+		raw cRNA backsplice counts: circRNA.cutoff[readthreshold]reads.[subjectthreshold]ind.countmatrix
+		limma adjusted (log2CPM) of above: 
+		Maximum Linear Splices at Circular Loci: rawdata/linear.[readthreshold]reads.[subjectthreshold]ind.sjmax
+	Info about each circRNA:  
+		Consensus Information about Internal Splicing: Circs[reads].[subjects].spliced.consensus
+		Complete Gene Annotation:  circRNA.[readthreshold]reads.[subjectthreshold]ind.annotated
+		Consise Gene Annotation + Splice Type:  circRNA.[readthreshold]reads.[subjectthreshold]ind.genes
+	There are other files as well stored in rawdata/ but they are mostly useful only if you need to really dig into the data. 
 
-Known issues:
-
-	Haven't really dug into how well this utilizes paired-end data

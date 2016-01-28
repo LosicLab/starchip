@@ -9,19 +9,15 @@ $minuscount=0;
 $starter=0;
 $matchcount=0;
 $supportreads=0;
-##$wiggle=5;
+$wiggle=2;
 
-$exacto="joinstrands." . $ARGV[0];
+$exacto="rawdata/backsplices." . $ARGV[0];
 open (EXACTMATCHES, ">$exacto") or die $!;
-$removeme="removed." . $ARGV[0];
+$removeme="rawdata/PEremoved." . $ARGV[0];
 open (REMOVED, ">$removeme") or die $!; 
-#print EXACTMATCHES "totalreads\t+strand\t-strand\tchrm\tpos\tstrand\tchrm\tpos\tstrand\tjxntype\toverlapL\toverlapR\n";  
-#$details="matchdetails.txt";
-#open (MATCHDETAILS, ">>$details") or die $!; 
-#$bedfile=$ARGV[0] . ".bed";
-#open (BEDFILE, ">$bedfile") or die $!;
 
 while (defined (my $queryline = <STDIN>)) {
+	#go through the output from chimera-score.pl
 	chomp($queryline);
 	if ($starter == 0) {
 		$starter++;
@@ -52,9 +48,7 @@ while (defined (my $queryline = <STDIN>)) {
 	@line2=@line1;
 	#line1 is the current line, line2 is the previous read
 	@line1=split(/\s+/, $queryline); # 0chrm 1pos 2strand 3chrm 4pos 5strand 6jxn type 78overlap 9score 10cigar
-	#if ($line1[0] eq $chrm && $line1[1]==$pos1 && $line1[4]==$pos2) { #match on chrm and positions of introns
-	#print "$line[1] - $pos1 <= $line[7] || $line1[8] &
-	if ($line1[0] eq $chrm && ( ($line1[1] - $pos1 <= $line1[7]) || ($line1[1] - $pos1 <= $line1[8]) ) && ( (abs($line1[4] - $pos2) <= $line1[7]) || (abs($line1[4] - $pos2) <= $line1[8] ))) { 
+	if ($line1[0] eq $chrm && ( (abs($line1[1] - $pos1) <= $wiggle) || (abs($line1[1] - $pos1) <= $wiggle) ) && ( (abs($line1[4] - $pos2) <= $wiggle) || (abs($line1[4] - $pos2) <= $wiggle ))) { 
 	#match on chrm and positions of introns
 		$legitimate=&check_badpair($line1[1], $line1[4], $line1[10], $queryline);
 		push @legits, $legitimate; 
@@ -79,20 +73,19 @@ while (defined (my $queryline = <STDIN>)) {
 			$median=&median(@scores);
 			$avglegit=&avg(@legits);
 			if ($avglegit >= 0.95) {
-				#at this point I flip the positions, so it goes low to high.  
-				print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\tchr$line2[3]:$line2[4]-$line2[1]\n";
+				#adjust positions:
+				$line2[1]++;  #star gives posititions as 1st base of intron outside splice.  
+				$line2[4]--;  # adding 1 to the lower position and subtracting 1 from the higher position adjusts this to be the last base in the circle.  
+				print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[1]\t$line2[5]\t$line2[0]\t$line2[4]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\t$line2[3]:$line2[1]-$line2[4]\n";
 				#			0     1           2               3       4               5       6       7               8       9               10      11      12        13            14
 				# tchr$line2[3]:$line2[4]-$line2[1]\n";
 				#  15		
-				#if ($pluscount >0) { 	
-				#	print BEDFILE "$chrm\t$pos1\t$pos2\tIDplaceholder\t$pluscount\t+\t$pos1\t$pos2\t255,0,0\t1\t1\t0\n"
-				#}
-				#if ($minuscount >0 ) {
-				#	print BEDFILE "$chrm\t$pos2\t$pos1\tIDplaceholder\t$minuscount\t-\t$pos2\t$pos1\t0,0,255\t1\t1\t0\n"
-				#}	
 			}
 			else {
-				print REMOVED "$avglegit\t$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\tchr$line2[3]:$line2[4]-$line2[1]\n";
+				#adjust positions:
+                                $line2[1]++;  #star gives posititions as 1st base of intron outside splice.  
+                                $line2[4]--;  # adding 1 to the lower position and subtracting 1 from the higher position adjusts this to be the last base in the circle.  
+     				print REMOVED "$avglegit\t$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[1]\t$line2[5]\t$line2[0]\t$line2[4]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\t$line2[3]:$line2[1]-$line2[4]\n";
 			}
 			$matchcount=0;
 			$chrm=$line1[0];
@@ -123,16 +116,16 @@ $minusmedian=&median(@minusscores);
 $median=&median(@scores);
 $avglegit=&avg(@legits);
 if ($avglegit >= 0.95) {
-	print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\tchr$line2[3]:$line2[4]-$line2[1]\n";
-	#if ($pluscount >0) {
-	#	print BEDFILE "$chrm\t$pos1\t$pos2\tIDplaceholder\t$pluscount\t+\t$pos1\t$pos2\t255,0,0\t1\t1\t0\n";
-	#}
-	#if ($minuscount >0 ) {
-	#	print BEDFILE "$chrm\t$pos2\t$pos1\tIDplaceholder\t$minuscount\t-\t$pos2\t$pos1\t0,0,255\t1\t1\t0\n"
-	#}
+	#adjust positions:
+        $line2[1]++;  #star gives posititions as 1st base of intron outside splice.  
+        $line1[4]--;  # adding 1 to the lower position and subtracting 1 from the higher position adjusts this to be the last base in the circle.  
+     	print EXACTMATCHES "$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[1]\t$line2[5]\t$line2[0]\t$line2[4]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\t$line2[3]:$line2[1]-$line2[4]\n";
 }
 else {
-	print REMOVED "$avglegit\t$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[4]\t$line2[5]\t$line2[0]\t$line2[1]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\tchr$line2[3]:$line2[4]-$line2[1]\n";
+	#adjust positions:
+        $line2[1]++;  #star gives posititions as 1st base of intron outside splice.  
+        $line1[4]--;  # adding 1 to the lower position and subtracting 1 from the higher position adjusts this to be the last base in the circle.  
+  	print REMOVED "$avglegit\t$count\t$pluscount\t$minuscount\t$line2[3]\t$line2[1]\t$line2[5]\t$line2[0]\t$line2[4]\t$line2[2]\t$line2[6]\t$line2[7]\t$line2[8]\t$median\t$plusmedian\t$minusmedian\t$line2[3]:$line2[1]-$line2[4]\n";
 }
 
 
@@ -170,7 +163,7 @@ sub check_badpair {
 	elsif ($cigarette2 =~ m/p/) {
 		$mycigar = $cigarette2 ; 
 	}
-	else { return("1"); #do something for single stranded
+	else { return("1"); #do something for single ended
 	}
 	my $aligned_total=0;
 	#step through the cigar:
@@ -196,7 +189,7 @@ sub check_badpair {
                         $count="";
 		}
 	}
-	my $totaldistance = $p1 - $p2 + 5; #the 5 is a little wiggle room.  
+	my $totaldistance = $p2 - $p1 + 3; # p2-p1 is the size of circle + 2 (because positions are 1st intron base). I add +3 to give a little buffer space.    
 	my $alignmentsize = $pairbuffer + $aligned_total + $spliceout;
 	my $checkval = $totaldistance - $alignmentsize;
 	#print "$mycigar\t$checkval\t$p1\t$p2\t$totaldistance\t$pairbuffer\t$aligned_total\t$spliceout\n";	
