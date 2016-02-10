@@ -1,0 +1,7 @@
+##Parameters for starchimp-circles
+readsCutoff = 5
+minSubjectLimit = 5
+cpus = 2
+do_splice = false 
+cpmCutoff = 0
+subjectCPMcutoff = 0 

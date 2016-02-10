@@ -1,7 +1,7 @@
 starchimp
 ==========
 starchimp is short for Star Chimeric Post, written by Kipp Akers as part of his work in Bojan Losic's group at the Icahn Institute of Genomics and Multiscale Biology at Mount Sinai School of Medicine
-
+=======
 This software is designed to take the chimeric output from the STAR alignment tool and discover high confidence fusions and circular RNA in the data. 
 Before running, you must have used a recent version of STAR with chimeric output turned on, to align your RNA-Seq data.
 
@@ -13,7 +13,7 @@ Currently, there are two main modules, which need to be run separately.
 
 Usage:
 
-	/path/to/starchimp/bin/starchimp-fusions.pl output_seed Chimeric.junction.out Parameters.txt
+	/path/to/starchimp/starchimp-fusions.pl output_seed Chimeric.junction.out Parameters.txt
 	
 		This will output to the directory from which the script is run. 
 
@@ -26,7 +26,7 @@ Softare Dependencies:
 
 Files Needed:
 	
-	parameters file (examples included in /starchimp/fusions/paramfiles )
+	parameters file (examples included in /starchimp/paramfiles )
 	Fasta File and GTF File used to generate STAR index 
 	repetative elements/antibody parts regions files in .bed format (included for hg19,hg38)
 	Optional: known gene families and paralogs (included for human)
@@ -50,7 +50,7 @@ Circular RNA is not poly-A modified, so generally data from poly-T amplified RNA
 
 Usage:
 
-	/path/to/starchimp/bin/starchimp-circles.pl star_dirs.txt parameters.txt 
+	/path/to/starchimp/starchimp-circles.pl star_dirs.txt parameters.txt 
 
 	starchimp-circles is designed to work on a set of multiple samples (though it works fine on 1 sample). 
 	star_dirs.txt should have 1 full pathway to star output per line: ie 
@@ -64,7 +64,7 @@ Software Dependencies:
 
 Files Needed:
 
-	GTF file with the same chromosome naming conventions as your star alignments. 
+	GTF file with the same chromosome naming conventions as your star alignments (in bed format).  
 	
 Resources:
 
@@ -81,4 +81,16 @@ Output:
 		Complete Gene Annotation:  circRNA.[readthreshold]reads.[subjectthreshold]ind.annotated
 		Consise Gene Annotation + Splice Type:  circRNA.[readthreshold]reads.[subjectthreshold]ind.genes
 	There are other files as well stored in rawdata/ but they are mostly useful only if you need to really dig into the data. 
+
+###########
+## Setup ##
+###########
+
+You will need to run /path/to/starchimp/scripts/setup/gtf2bed.sh to create a gtf file in bed format as well as a .genome file:
+	
+		Usage: gtf2bed.sh /path/to/my.gtf  /path/to/desired/output_directory/
+
+
+You will also need to create parameters files for your run.  See examples in /starchimp/paramfiles/ or the manual for complete details.
+
 

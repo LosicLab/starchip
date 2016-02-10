@@ -1,0 +1,46 @@
+### Parameters for fusions-from-star.pl
+
+## Describing Your Data:
+
+offset = 1   # 0 based or 1 based coordinate system?  UCSC = 0, Ensemble = 1
+pairedend = TRUE  #TRUE means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
+consensus = TRUE  	# anything but TRUE will make this skip the consensus sequence generation for each fusion.
+simscore = NO         #anything but TRUE will skip similarity score testing.  In my experience this feature isn't that helpful.
+
+## Filters, Cutoffs 
+
+splitReads = 10 # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time.   
+uniqueReads = 6 # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact)
+spancutoff = 5 #minimum number of non-split reads support.  If single end data, this must be 0. 
+wiggle = 500  #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
+overlapLimit = 5 #wiggle room for joining very closely called fusion sites.
+samechrom_wiggle = 20000 #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome pr
+lopsidedupper = 5 # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
+lopsidedlower = 0.2 # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
+genome = hg19 #will look for file: data/genome.abparts.  currently have hg19, hg38, and mm9
+cnvwiggle = 1000 #we skip fusions that can be explained by known cnvs.  how close to the edges of the cnv must our fusion be?
+circlesize = 100000 #we skip fusions that look more like circular rna/backsplices.  how big (bp) could a circle be?    
+
+## Local Reference Files:
+
+	#refbed is a bed format version of a gtf.  This should probably be derived from the same GTF that STAR aligned with.   
+refbed=/sc/orga/projects/PBG/REFERENCES/hg19/starchimp/Homo_sapiens.GRCh37.74.chr.test.gtf.bed 
+#refbed=/sc/orga/projects/losicb01a/common_folder/ref/hg38/bed/gencode.v21.annotation.gtf.bed
+#refbed=/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed
+#refbed=/sc/orga/projects/losicb01a/common_folder/ref/mm10/bed/Mus_musculus.GRCm38.75.gtf.chr.bed
+        # a bed format list of known repeats
+repeatbed=/sc/orga/projects/PBG/REFERENCES/hg19/starchimp/repeats_hg19plus.bed
+#repeatbed=/sc/orga/work/akersn01/ref/repeats_hg19plus.bed
+#repeatbed=/sc/orga/work/akersn01/ref/repeats_hg38plus.bed
+#repeatbed=/sc/orga/projects/JanssenIBD/blosic/DSS_Colon_experiment_T_B_Cell_transfer_models/fusions/Repeats_Class_mm10_09.20.2013.bed
+        # fasta reference.  should be indexed (run 'samtools faidx file.fa')
+#refFasta = /sc/orga/projects/losicb01a/common_folder/ref/hg38/star/GRCh38_Gencode21_overhang100/GCA_000001405.15_GRCh38_no_alt_analysis_set.fa
+refFasta = /sc/orga/work/akersn01/ref/star/ENSEMBL.homo_sapiens.release-75_overhang100/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa
+#refFasta=/sc/orga/projects/PBG/REFERENCES/mm10/tophat/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa
+#refFasta = /sc/orga/scratch/akersn01/AAV2/custom_indexHBV/makegenome/custom.hg19.fa
+
+#Scoring Parameters (feel free to tweak).
+splitscoremod = 10
+spanscoremod = 20
+skewpenalty = 4
+repeatpenalty = 0.5  # score = score*(repeatpenalty^repeats)  --> a fusion can have 0,1,or 2 sites fall into repeat regions.

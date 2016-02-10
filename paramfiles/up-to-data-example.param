@@ -1,0 +1,37 @@
+### Parameters for fusions-from-star.pl
+
+## Describing Your Data:
+
+pairedend = TRUE  #TRUE means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
+consensus = TRUE  # anything but TRUE will make this skip the consensus sequence generation for each fusion.
+## Filters, Cutoffs 
+
+splitReads = AUto # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time.   
+uniqueReads = 2 # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact).
+spancutoff = autO #minimum number of non-split reads support.  If single end data, this must be 0. 
+wiggle = 500  #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
+overlapLimit = 5 #wiggle room for joining very closely called fusion sites.
+samechrom_wiggle = 20000 #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome pr
+lopsidedupper = 50 # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
+lopsidedlower = 0.02 # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
+cnvwiggle = 1000 #we skip fusions that can be explained by known cnvs.  how close to the edges of the cnv must our fusion be?
+circlesize = 100000 #we skip fusions that look more like circular rna/backsplices.  how big (bp) could a circle be?    
+
+## Local Reference Files:
+	#refbed is a bed format version of a gtf.  This should probably be derived from the same GTF that STAR aligned with.   
+refbed=/sc/orga/projects/PBG/REFERENCES/hg19/starchimp/Homo_sapiens.GRCh37.74.chr.test.gtf.bed
+        # a bed format list of known repeats
+repeatbed=/sc/orga/work/akersn01/ref/repeats_hg19plus.bed
+        # fasta reference.  should be indexed (run 'samtools faidx file.fa')
+refFasta = /sc/orga/projects/losicb01a/common_folder/ref/hg19/fasta/ucsc_hg19_dna_primary.fa
+abparts = data/hg19.abparts
+cnvs = data/conrad_hg19.cnvs
+familyfile = data/ensfams.txt
+falsepositives = data/knownFP.txt 
+
+
+#Scoring Parameters (feel free to tweak).
+splitscoremod = 10
+spanscoremod = 20
+skewpenalty = 4
+repeatpenalty = 0.5  # score = score*(repeatpenalty^repeats)  --> a fusion can have 0,1,or 2 sites fall into repeat regions.
