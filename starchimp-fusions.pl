@@ -24,7 +24,7 @@ my $numbcolumns=14; #need this one in case you junction.out file/input changes. 
 
 #file management
 my $script_dir=abs_path($0);
-$script_dir =~ s/starchimp-fusions.pl/scripts/fusions\//;
+$script_dir =~ s/starchimp-fusions.pl/scripts\/fusions\//;
 my $outbase = $ARGV[0];
 my $outsumm = $outbase . ".summary";
 my $outsummtemp = $outsumm . ".temp";
