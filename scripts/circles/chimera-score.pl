@@ -95,7 +95,7 @@ sub junc_filter
 	#4: first base of the intron of the acceptor5: strand of the acceptor 6: junction type: -1=junction is between the mates, 1=GT/AG, 2=CT/AC 7: repeat length to the left of the junction 
 	#8: repeat length to the right of the junction 9/10/11/12/13 readname/1stbase/cigar/1stbase/cigar
 	if ( $split[9] ne $_[0] ) {
-		die "out of order chimeric files, $split[9] does not match $_[0] at line $junctionline.  please check inputs\n";
+		die "out of order chimeric files, $split[9] does not match $_[0] at line $junctionline within $dir Chimeric.out.junction and Chimeric.out.sam.  please check inputs\n";
 	}
 	if ($split[6] >= 0 &&
 		$split[0] ne "MT" &&

@@ -1,8 +1,4 @@
-##usage: ./circle_star.sh readsMinimum minSubjects stardirs.txt splice
-#for example with the structure: /data/star_alignments/star1, star2, star3, star4
-# you would run ./circle_star.sh 5 5 /data/star_alignments/ splice
-
-# calls Rscript
+# calls Rscript (R required)
 
 ##list of arguments required:
 #  1: readsCutoff  2: minSubjectsLimit  3:star_dir_list.txt  4:do_splice(true/false)  5:cpus  6: cpmCutoff  7: subjectCPMcutoff
@@ -58,7 +54,7 @@ while read f ; do
 	uniqIDindex=$((length-$IDstepsback))
 	uniqID=${array[${uniqIDindex}]}
 	Parent="$(dirname "$f")"
-	echo $uniqID >> rawdata/temp_subject_IDS.txt
+	#echo $uniqID >> rawdata/temp_subject_IDS.txt
 	IDarray=("${IDarray[@]}" "${f}")
 done < ${3}
 
@@ -71,7 +67,7 @@ echo "Filtering circular reads based on assigned thesholds of ${cutofflist[@]} r
 ##Generate a cutoff file with all cRNA above the reads cutoff
 for cutoff in "${cutofflist[@]}" ; do
         ##now toss all candidates that pass a read support cutoff into a file named for the cutoff# (ie 10,20,50)
-        cat rawdata/temp_subject_IDS.txt | xargs --max-procs=${cpus} -I {} awk -v var="$cutoff" -v var2="rawdata/cRNA.cutoff.${cutoff}" '{ if ($1 >= var) print $0 >> var2 }' rawdata/backsplices.{}
+        ls rawdata/backsplices* | xargs --max-procs=${cpus} -I {} awk -v var="$cutoff" -v var2="rawdata/cRNA.cutoff.${cutoff}" '{ if ($1 >= var) print $0 >> var2 }' {}
 done
 
 
@@ -82,53 +78,28 @@ for cutoff in "${cutofflist[@]}" ; do
 done 
 #generates circs"${cutoff}"."${minSubjLimit}".investigate
 
-## Create a count matrix using backsplice files + circs"${cutoff}"."${minSubjLimit}".investigate (separate file is called make_circ_table.sh)
+##
+## Create a count matrix using backsplice files + circs"${cutoff}"."${minSubjLimit}".investigate
+##
 echo "Creating a count matrix.  This may take a long time."
-for f in ${cutofflist[@]} ; do
-        rm -f circ.headers.cutoff${f}.${minSubjLimit}
-        rm -f circRNA.cutoff${f}.${minSubjLimit}
-	rm -f row.names.${cutoff}
-done
-#create the row names.
 for cutoff in ${cutofflist[@]} ; do
+	#clean up any potential old files
+	rm -f row.names.${cutoff}
+	#create the rown.names files
+	echo "cRNA" >> row.names.${cutoff}
 	while read circ ; do 
 		circarray=(${circ// / })
 		echo ${circarray[0]}":"${circarray[1]}"-"${circarray[2]} >> row.names.${cutoff}
 	done < rawdata/circs${cutoff}.${minSubjLimit}.investigate   
+	#cycle throgh all subject files, create columns
+	rm -f rawdata/backsplices.*grepcircles.temp
+	ls rawdata/backsplices.* | xargs --max-procs=${cpus} -I {} ${DIR}/grep-circles.pl rawdata/circs${cutoff}.${minSubjLimit}.investigate {} count
+	#assemble the matrix by pasting columns
+	paste row.names.${cutoff} rawdata/backsplices.*grepcircles.temp > circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix
+	#clean up: remove columns
+	rm -f row.names.${cutoff} rawdata/backsplices.*grepcircles.temp 
 done
-#cycle through the cutoffs
-for cutoff in ${cutofflist[@]} ; do
-	cat row.names.${cutoff} > circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix
-	#cycle throgh all subject files
-        for f in rawdata/backsplices.* ; do
-		#cycle through circles
-		rm -f ${f}.temp
-		while read circ ; do
-			circarray=(${circ// / })
-			ucscname=${circarray[0]}":"${circarray[1]}"-"${circarray[2]}
-			#searchstring="${circarray[0]}\t${circarray[1]}\t.\t${circarray[0]}\t${circarray[2]}"
-		        #grephit=$(grep -P $searchstring $f )
-                	grephit=$(fgrep $ucscname $f )
-			if  [[ $? -eq  0 ]] ; then 
-        		        echo $grephit |cut -f1 -d" " >>${f}.temp
-                        else
-                                echo "0" >> ${f}.temp
-                        fi
-                done <rawdata/circs${cutoff}.${minSubjLimit}.investigate
-		#add this subject's data to the countmatrix
-		paste circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix  ${f}.temp > tempmatrix
-        	mv tempmatrix circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix
-		#add to the header file. 
-		echo -n -e ${f}"\t" | sed 's/rawdata\/backsplices\.//' >>circ.headers.cutoff${cutoff}.${minSubjLimit}
-		rm ${f}.temp
-	done
-	#clean up the header, put it on top of the count matrix. 
-	sed -i 's/\t$/\n/' circ.headers.cutoff${cutoff}.${minSubjLimit}
-	cat circ.headers.cutoff${cutoff}.${minSubjLimit} circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix >tempmatrix
-	mv tempmatrix circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix 
-	rm -f circ.headers.cutoff${cutoff}.${minSubjLimit} row.names.${cutoff}
-done
-##wait ${!}
+wait 
 
 #generate counts per million. 
 echo "generating counts per million, and transforming your data with voom"
@@ -137,7 +108,17 @@ for f in ${cutofflist[@]} ; do
 done 
 wait 
 
-
+#Annotate Genes
+if [ ${annotate} == 'true' ] ; then
+	echo "annotating your cRNA"
+	for f in ${cutofflist[@]} ; do
+		cut -f1 circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix > circRNA.${cutoff}reads.${minSubjLimit}ind
+		${DIR}/cRNA_coordinates2genes.sh circRNA.${cutoff}reads.${minSubjLimit}ind $refbed
+		rm circRNA.${cutoff}reads.${minSubjLimit}ind
+		#summarize the data
+		tail -n +2 circRNA.${cutoff}reads.${minSubjLimit}ind.annotated | ${DIR}/summarize_geneinfo.pl > circRNA.${cutoff}reads.${minSubjLimit}ind.genes
+	done
+fi
 
 #splicing
 if [ ${4} == 'true' ] ; then
@@ -152,54 +133,20 @@ if [ ${4} == 'true' ] ; then
 	for f in ${cutofflist[@]} ; do 
 		${DIR}/candidate_stats.pl rawdata/circs${f}.${minSubjLimit}.investigate ${f}.spliced &
 	done
-	wait
 	##generate sj max matrix
 	echo "creating matrix of maximum linear splices"
 	for cutoff in ${cutofflist[@]} ; do
-        	rm -f circ.headers.cutoff${cutoff}.${minSubjLimit}
-        	cut -f1 circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix |tail -n +2 > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax
-        	cp rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype
-        	for f in rawdata/*spliced ; do 
-                	rm -f ${f}.temp ${f}.temp2
-                	while read circ ; do 
-                    	circarray=(${circ// / })
-                    	ucscname=${circarray[0]}":"${circarray[1]}"-"${circarray[2]}
-                    	grephit=$(fgrep $ucscname $f )
-                    	if  [[ $? -eq  0 ]] ; then 
-                            	echo $grephit |cut -f27 -d" " >>${f}.temp
-                            	echo $grephit |cut -f28 -d" " >>${f}.temp2
-                 	else
-                            	echo "0" >> ${f}.temp
-                            	echo "." >> ${f}.temp2
-                    	fi
-                	done <rawdata/circs${cutoff}.${minSubjLimit}.investigate
-                	#paste columns to full matrix
-                	paste rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax ${f}.temp > tempmatrix
-                	paste rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype ${f}.temp2 >tempmatrix2
-                	mv tempmatrix rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax
-                	mv tempmatrix2 rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype
-                	#add to the header file.
-                	echo -n -e ${f}"\t" | sed 's/rawdata\///' | sed "s/\.${cutoff}.spliced//"  >>circ.headers.cutoff${cutoff}.${minSubjLimit}
-                	rm ${f}.temp ${f}.temp2
-        	done
-        	#clean up the header, put it on top of the count matrix. 
-        	sed -i 's/\t$/\n/' circ.headers.cutoff${cutoff}.${minSubjLimit}
-        	cat circ.headers.cutoff${cutoff}.${minSubjLimit} rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax >tempmatrix
-        	cat circ.headers.cutoff${cutoff}.${minSubjLimit} rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype >tempmatrix2
-        	mv tempmatrix rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax
-        	mv tempmatrix2 rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype
-        	rm circ.headers.cutoff${cutoff}.${minSubjLimit} 
+		#create the rownames
+        	cut -f1 circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix > row.names.${cutoff}
+		#create all of the columns as rawdata/*spliced.temp and rawdata/*spliced.temp2 
+		ls rawdata/*spliced | xargs --max-procs=${cpus} -I {} ${DIR}/grep-circles.pl rawdata/circs${cutoff}.${minSubjLimit}.investigate {} linear
+		# paste all the columns together
+		paste row.names.${cutoff} rawdata/*spliced.temp > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax
+		paste row.names.${cutoff} rawdata/*spliced.temp2 > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype
+		#remove all the column files
+        	rm rawdata/*spliced.temp rawdata/*spliced.temp2 row.names.${cutoff}
 	done
+	wait
 fi
-#generates .consensus and .allvariants files, as well as .sjmax and .splicetype matrixes.  
+#generates .consensus and .allvariants files, as well as .sjmax and .splicetype matrixes.
 
-if [ ${annotate} == 'true' ] ; then
-	echo "annotating your cRNA"
-	for f in ${cutofflist[@]} ; do
-		cut -f1 circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix > circRNA.${cutoff}reads.${minSubjLimit}ind
-		${DIR}/cRNA_coordinates2genes.sh circRNA.${cutoff}reads.${minSubjLimit}ind $refbed
-		rm circRNA.${cutoff}reads.${minSubjLimit}ind
-		#summarize the data
-		tail -n +2 circRNA.${cutoff}reads.${minSubjLimit}ind.annotated | ${DIR}/summarize_geneinfo.pl > circRNA.${cutoff}reads.${minSubjLimit}ind.genes
-	done
-fi
