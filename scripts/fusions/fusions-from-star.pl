@@ -60,12 +60,14 @@ my $consensusloc= $script_dir . 'consensus.sh';
 my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $blastscript = $script_dir . 'check-pseudogenes.sh'; 
 my $smithwaterman = $script_dir . 'smith_waterman.pl';
-my $sw_matrix = $script_dir . 'data/' . 'sw_scoremat.txt';
+my $data_dir = abs_path($0) ; 
+$data_dir =~ s/\/scripts\/fusions\/fusions-from-star.pl/;
+my $sw_matrix = $data_dir . 'data/' . 'sw_scoremat.txt';
 
-my $abpartsfile = $script_dir . $Configs{abparts} ;
-my $troublemakers = $script_dir . $Configs{falsepositives} ;
-my $familyfile = $script_dir . $Configs{familyfile} ;
-my $cnvfile = $script_dir . $Configs{cnvs} ; 
+my $abpartsfile = $data_dir . $Configs{abparts} ;
+my $troublemakers = $data_dir . $Configs{falsepositives} ;
+my $familyfile = $data_dir . $Configs{familyfile} ;
+my $cnvfile = $data_dir . $Configs{cnvs} ; 
 
 unless (-e $abpartsfile ) { #if the file isn't in starchimp/
 	$abpartsfile = $Configs{abparts} ; #check the absolute path
