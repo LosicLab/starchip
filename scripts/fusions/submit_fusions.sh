@@ -6,8 +6,14 @@
 #get dir of this script
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 #get directory 2 level up for starchimp-fusions.pl
-DIR=dirname $(dirname $DIR)
-
+#DIR=dirname $(dirname $DIR)
+#echo $DIR
+DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
+DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
+#DIR=`echo $DIR |sed 's/\/[.*$//' `;
+#DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
+#echo $DIR
+#exit ; 
 mkdir -p log
 mkdir -p runfiles
 mkdir -p data
