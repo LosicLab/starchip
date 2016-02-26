@@ -6,14 +6,11 @@
 #get dir of this script
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 #get directory 2 level up for starchimp-fusions.pl
-#DIR=dirname $(dirname $DIR)
-#echo $DIR
-DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
-DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
-#DIR=`echo $DIR |sed 's/\/[.*$//' `;
 #DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
-#echo $DIR
-#exit ; 
+#DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
+DIR=`echo $DIR |sed 's/\/[^/]*$//' `;
+DIR=`echo $DIR |sed 's/\/[^/]*$//' `;
+
 mkdir -p log
 mkdir -p runfiles
 mkdir -p data
@@ -34,7 +31,7 @@ echo "
 ###BSUB -m manda
 #BSUB -R "rusage[mem=5000]"
 #BSUB -R "span[hosts=1]"
-module load bedtools samtools
+module load starchimp
 ${DIR}/starchimp-fusions.pl data/"${ID}" "${line}" "${params}"
 " > runfiles/${ID}.lsf
 done < $junctionFiles

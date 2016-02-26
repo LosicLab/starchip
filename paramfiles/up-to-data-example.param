@@ -24,10 +24,10 @@ refbed=/sc/orga/projects/PBG/REFERENCES/hg19/starchimp/Homo_sapiens.GRCh37.74.ch
 repeatbed=/sc/orga/work/akersn01/ref/repeats_hg19plus.bed
         # fasta reference.  should be indexed (run 'samtools faidx file.fa')
 refFasta = /sc/orga/projects/losicb01a/common_folder/ref/hg19/fasta/ucsc_hg19_dna_primary.fa
-abparts = data/hg19.abparts
-cnvs = data/conrad_hg19.cnvs
-familyfile = data/ensfams.txt
-falsepositives = data/knownFP.txt 
+abparts = reference/hg19.abparts
+cnvs = reference/conrad_hg19.cnvs
+familyfile = reference/ensfams.txt
+falsepositives = reference/knownFP.txt 
 
 
 #Scoring Parameters (feel free to tweak).

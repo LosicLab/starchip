@@ -49,12 +49,16 @@ my $junction = $ARGV[1];
 my $sam = $junction;
 $sam =~ s/junction$/sam/ ;
 my ($trash, $stardir) = fileparse($junction) ;   
+my $data_dir = $script_dir ;
+$data_dir =~ s/scripts\/fusions//;
 
-my $troublemakers = $script_dir . $Configs{falsepositives} ;
-my $familyfile = $script_dir . $Configs{familyfile} ;
-my $cnvfile = $script_dir . $Configs{cnvs} ;
+
+my $troublemakers = $data_dir .  $Configs{falsepositives} ;
+my $familyfile = $data_dir . $Configs{familyfile} ;
+my $cnvfile = $data_dir . $Configs{cnvs} ;
 
 unless (-e $troublemakers ) { #if the file isn't in starchimp/
+	print "$troublemakers\n"; 
         $troublemakers = $Configs{falsepositives} ; #check the absolute path
         unless (-e $troublemakers ) {
                 print "Warning: Can not find your False Positives File: $Configs{falsepositives}\n";
@@ -230,11 +234,12 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 		#pull out consensus sequence and alignment score
 		#calculate fusion score
 		my ($refseq, $consSeq, $alignScore) = &extractSequence($line[0], $line[1]);
+		print "$alignScore\n"; 
 		my $score = $line[2];
 		$score = $score*($Configs{repeatpenalty}**$line[($indices[0]-2)]) ;#penalize repeats : $line[($indices[0]-2)] is the # of repeats in this fusion
 		#we want to penalize fusions with overhangs less than avgAStarget.  
 		my $OverhangScoreMod;
-		my $ASdifference = $alignscore - $minAS; 
+		my $ASdifference = $alignScore - $minAS; 
 		if ( $alignScore - $avgAStarget > 0) { #ie if our overhang is above where we expect it.
 			$OverhangScoreMod = 1 ; 
 		}
@@ -355,6 +360,7 @@ sub extractSequence {
 		my ($unadjposA, $unadjposB) = &unadjustposition($posA, $strandA, $posB, $strandB); 
 		#consensus command is : consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
 		my $consensuscmd = "$consensusloc '$chrA' $unadjposA '$chrB' $unadjposB $junction $sam $tempID $refseq $script_dir";
+		print "$consensuscmd\n";
 		my @consResults=`$consensuscmd`; 
 		my $consensusSeq=$consResults[0];
 		chomp $consensusSeq;
@@ -365,7 +371,7 @@ sub extractSequence {
 			return ($refseq, $consensusSeq, $avgAS);		
 		}
 		else { 
-			return ($refseq, ".", $avgAS); 
+			return ($refseq, ".", "0"); 
 		}
 	}
 }

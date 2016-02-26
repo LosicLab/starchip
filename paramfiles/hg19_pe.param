@@ -1,11 +1,8 @@
 ### Parameters for fusions-from-star.pl
 
 ## Describing Your Data:
-
-offset = 1   # 0 based or 1 based coordinate system?  UCSC = 0, Ensemble = 1
 pairedend = TRUE  #TRUE means paired end data.  any other value means single end. $spancutoff should be 0 if data is single end.
 consensus = TRUE  	# anything but TRUE will make this skip the consensus sequence generation for each fusion.
-simscore = NO         #anything but TRUE will skip similarity score testing.  In my experience this feature isn't that helpful.
 
 ## Filters, Cutoffs 
 
@@ -17,7 +14,6 @@ overlapLimit = 5 #wiggle room for joining very closely called fusion sites.
 samechrom_wiggle = 20000 #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome pr
 lopsidedupper = 5 # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be below this value. set very high to disable.  Reccomended setting 5
 lopsidedlower = 0.2 # (topsidereads + 0.1) / (bottomsidereads + 0.1) must be above this value. set to 0 to disable. Reccomended setting 0.2
-genome = hg19 #will look for file: data/genome.abparts.  currently have hg19, hg38, and mm9
 cnvwiggle = 1000 #we skip fusions that can be explained by known cnvs.  how close to the edges of the cnv must our fusion be?
 circlesize = 100000 #we skip fusions that look more like circular rna/backsplices.  how big (bp) could a circle be?    
 
@@ -38,6 +34,11 @@ repeatbed=/sc/orga/projects/PBG/REFERENCES/hg19/starchimp/repeats_hg19plus.bed
 refFasta = /sc/orga/work/akersn01/ref/star/ENSEMBL.homo_sapiens.release-75_overhang100/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa
 #refFasta=/sc/orga/projects/PBG/REFERENCES/mm10/tophat/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa
 #refFasta = /sc/orga/scratch/akersn01/AAV2/custom_indexHBV/makegenome/custom.hg19.fa
+
+abparts = reference/hg19.abparts
+cnvs = reference/conrad_hg19.cnvs
+familyfile = reference/ensfams.txt
+falsepositives = reference/knownFP.txt
 
 #Scoring Parameters (feel free to tweak).
 splitscoremod = 10

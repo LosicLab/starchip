@@ -48,4 +48,4 @@ if ($. > 1) {
 }
 #cleanup
 my $cleanupcmd = "rm $outsummtemp $outannotemp";
-#system($cleanupcmd); 
+system($cleanupcmd); 

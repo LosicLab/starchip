@@ -61,36 +61,35 @@ my $annotateloc= $script_dir . 'coordinates2genes.sh';
 my $blastscript = $script_dir . 'check-pseudogenes.sh'; 
 my $smithwaterman = $script_dir . 'smith_waterman.pl';
 my $data_dir = abs_path($0) ; 
-$data_dir =~ s/\/scripts\/fusions\/fusions-from-star.pl/;
-my $sw_matrix = $data_dir . 'data/' . 'sw_scoremat.txt';
+$data_dir =~ s/\/scripts\/fusions\/fusions-from-star.pl//;
 
-my $abpartsfile = $data_dir . $Configs{abparts} ;
-my $troublemakers = $data_dir . $Configs{falsepositives} ;
-my $familyfile = $data_dir . $Configs{familyfile} ;
-my $cnvfile = $data_dir . $Configs{cnvs} ; 
+my $abpartsfile = $data_dir . "/" . $Configs{abparts} ;
+my $troublemakers = $data_dir . "/" . $Configs{falsepositives} ;
+my $familyfile = $data_dir . "/" . $Configs{familyfile} ;
+my $cnvfile = $data_dir . "/" . $Configs{cnvs} ; 
 
 unless (-e $abpartsfile ) { #if the file isn't in starchimp/
 	$abpartsfile = $Configs{abparts} ; #check the absolute path
 	unless (-e $abpartsfile ) {
-		print "Warning: Can not find your Antibody Parts File: $Configs{abparts}\n";
+		print "Warning: Can not find your Antibody Parts File: $Configs{abparts} or $data_dir/$Configs{abparts} \n";
 	}
 }
 unless (-e $troublemakers ) { #if the file isn't in starchimp/
 	$troublemakers = $Configs{falsepositives} ; #check the absolute path
 	unless (-e $troublemakers ) {
-		print "Warning: Can not find your False Positives File: $Configs{falsepositives}\n";
+		print "Warning: Can not find your False Positives File: $Configs{falsepositives} $data_dir/$troublemakers\n";
 	}
 }
 unless (-e $familyfile ) { #if the file isn't in starchimp/
 	$familyfile = $Configs{familyfile} ; #check the absolute path
 	unless (-e $familyfile ) {
-		print "Warning: Can not find your Gene Families File: $Configs{familyfile}\n";
+		print "Warning: Can not find your Gene Families File: $Configs{familyfile} or $data_dir/$familyfile\n";
 	}
 }
 unless (-e $cnvfile ) { #if the file isn't in starchimp/
 	$cnvfile = $Configs{cnvs} ; #check the absolute path
 	unless (-e $cnvfile ) {
-		print "Warning: Can not find your Copy Number Variants File: $Configs{cnvs}\n";
+		print "Warning: Can not find your Copy Number Variants File: $Configs{cnvs}\n or $data_dir/$cnvfile \n";
 	}
 }
 
