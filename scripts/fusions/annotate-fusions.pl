@@ -58,7 +58,7 @@ my $familyfile = $data_dir . $Configs{familyfile} ;
 my $cnvfile = $data_dir . $Configs{cnvs} ;
 
 unless (-e $troublemakers ) { #if the file isn't in starchimp/
-	print "$troublemakers\n"; 
+	#print "$troublemakers\n"; 
         $troublemakers = $Configs{falsepositives} ; #check the absolute path
         unless (-e $troublemakers ) {
                 print "Warning: Can not find your False Positives File: $Configs{falsepositives}\n";
@@ -234,7 +234,6 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 		#pull out consensus sequence and alignment score
 		#calculate fusion score
 		my ($refseq, $consSeq, $alignScore) = &extractSequence($line[0], $line[1]);
-		print "$alignScore\n"; 
 		my $score = $line[2];
 		$score = $score*($Configs{repeatpenalty}**$line[($indices[0]-2)]) ;#penalize repeats : $line[($indices[0]-2)] is the # of repeats in this fusion
 		#we want to penalize fusions with overhangs less than avgAStarget.  
@@ -328,14 +327,14 @@ sub extractSequence {
 	while (@fastaA) {
 		my $x = shift(@fastaA);
 		chomp $x ;
-		if ($x =~ m/^[actgACTG]/) {
+		if ($x =~ m/^[actgnACTGN]/) {
 			$sequenceA .=$x ;
 		}
 	}
 	while (@fastaB) {
 		my $x = shift(@fastaB);
 		chomp $x ;
-		if ($x =~ m/^[actgACTG]/) {
+		if ($x =~ m/^[actgnACTGN]/) {
                         $sequenceB .=$x ;
                 }
 	}
@@ -360,7 +359,7 @@ sub extractSequence {
 		my ($unadjposA, $unadjposB) = &unadjustposition($posA, $strandA, $posB, $strandB); 
 		#consensus command is : consensus.sh chrom1 pos1 chrom2 pos2 junctionfile samfile fusionID reference_sequence
 		my $consensuscmd = "$consensusloc '$chrA' $unadjposA '$chrB' $unadjposB $junction $sam $tempID $refseq $script_dir";
-		print "$consensuscmd\n";
+		#print "$consensuscmd\n";
 		my @consResults=`$consensuscmd`; 
 		my $consensusSeq=$consResults[0];
 		chomp $consensusSeq;

@@ -23,7 +23,7 @@ echo "
 #BSUB -J fusionfilter
 #BSUB -e log/"${ID}".e
 #BSUB -o log/"${ID}".o
-#BSUB -q low
+#BSUB -q alloc
 #BSUB -P acc_PBG
 #BSUB -W 1:00
 #BSUB -n 2
