@@ -86,10 +86,12 @@ Output:
 ## Setup ##
 ###########
 
-You will need to run /path/to/starchimp/scripts/setup/gtf2bed.sh to create a gtf file in bed format as well as a .genome file:
+Both Fusions and Circles require a completed STAR run with chimeric output turned on.  I STRONGLY recommend using the same fasta and gtf files to build your STAR index and run STARCHIMP.    
+You will need to run /path/to/starchimp/scripts/setup/gtf2bed.sh to create gtf files in bed format as well as .genome files:
 	
-		Usage: gtf2bed.sh /path/to/my.gtf  /path/to/desired/output_directory/
+		Usage: gtf2bed.sh /path/to/my.gtf  /path/to/my.fasta /path/to/desired/output_directory/
 
+This will create a a my.gtf.bed file and a my.gtf.exons.bed file.  The only difference is that the 2nd file is restricted to gtf lines that have exon information, excluding annotations like full transcripts.  This will only affect your annotations, but I reccomend the exons file for the best annotations.   
 
 You will also need to create parameters files for your run.  See examples in /starchimp/paramfiles/ or the manual for complete details.
 
