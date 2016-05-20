@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # calls Rscript (R required)
 
 ##list of arguments required:
@@ -141,10 +143,10 @@ if [ ${4} == 'true' ] ; then
 		#create all of the columns as rawdata/*spliced.temp and rawdata/*spliced.temp2 
 		ls rawdata/*spliced | xargs --max-procs=${cpus} -I {} ${DIR}/grep-circles.pl rawdata/circs${cutoff}.${minSubjLimit}.investigate {} linear
 		# paste all the columns together
-		paste row.names.${cutoff} rawdata/*spliced.temp > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax
-		paste row.names.${cutoff} rawdata/*spliced.temp2 > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype
+		paste row.names.${cutoff} rawdata/*spliced.grepcircles.temp > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.sjmax
+		paste row.names.${cutoff} rawdata/*spliced.grepcircles.temp2 > rawdata/linear.${cutoff}reads.${minSubjLimit}ind.splicetype
 		#remove all the column files
-        	rm rawdata/*spliced.temp rawdata/*spliced.temp2 row.names.${cutoff}
+        	rm rawdata/*spliced.grepcircles.temp rawdata/*spliced.grepcircles.temp2 row.names.${cutoff}
 	done
 	wait
 fi

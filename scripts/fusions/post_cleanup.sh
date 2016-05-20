@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #usage: post_cleanup.sh ListOfFiles output_prefix  Go
 
 if [ -z ${1+x} ] || [ $1 == "-h" ] || [ $1 == "--help" ] || [ $1 == "-help" ]; then

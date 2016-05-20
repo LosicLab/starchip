@@ -1,3 +1,5 @@
+#!/bin/bash
+
 gtf=$2 
 fasta=$3
 cut -f7,9 $1 |tail -n +2 |sort |uniq > ${1}.genes

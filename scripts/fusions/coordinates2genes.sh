@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #usage coordinates2genes.sh file.summary gtf.bed repeats.bed
 ##inputs: 1: file.summary
 #gtfbed=/sc/orga/work/akersn01/ref/Homo_sapiens.GRCh37.74.chr.gtf.bed

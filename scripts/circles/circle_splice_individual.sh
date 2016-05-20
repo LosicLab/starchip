@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #usage: ./circle_splice_individual.sh star_alignment_dir/ readscutoff star_out_prefix uniqID  >output_file
 
 #the circular candidates should be in the format output by filter_circs.pl

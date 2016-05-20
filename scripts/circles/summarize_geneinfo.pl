@@ -21,7 +21,10 @@ while (my $x = <>) { #read in argv[0] or stdin:
 		$strand=$p1Strand;
 		$GeneID=$gene1name[0];
 		#determine type of splice
-		if ($p1Distance == 0 && $p2Distance == 0 ) {
+		if ($p1Distance eq "NA" || $p1Distance eq "NA" ) {
+			$circleType="Unannotated";
+		}
+		elsif ($p1Distance == 0 && $p2Distance == 0 ) {
 			$circleType="Exon-Exon";
 		}
 		elsif ($p1Distance == -1 && $p2Distance == 1) {
@@ -69,17 +72,29 @@ while (my $x = <>) { #read in argv[0] or stdin:
 		}
 	}
 	$GeneID =~ s/gene_name:"//g;
+	$GeneID =~ s/gene_name://g; 
 	$GeneID =~ s/gene_id:"//g;
 	$GeneID =~ s/"//g;
 	##Get Exon Information
 	my @p1exon=grep(/exon_number/, @p1geneinfo);
 	my @p2exon=grep(/exon_number/, @p2geneinfo);
-	$p1Exon = $p1exon[0];
-	$p2Exon = $p2exon[0];
-	$p1Exon =~ s/exon_number://g;
-	$p2Exon =~ s/exon_number://g;
-	$p1Exon =~ s/"//g;
-	$p2Exon =~ s/"//g;
+	# If exons are annotated 
+	if ( @p1exon ) { 
+		$p1Exon = $p1exon[0];
+		$p1Exon =~ s/exon_number://g;
+		$p1Exon =~ s/"//g;
+	}
+	else {
+		$p1Exon = "NA"; 
+	}
+	if ( @p2exon) {
+		$p2Exon = $p2exon[0];
+		$p2Exon =~ s/exon_number://g;
+		$p2Exon =~ s/"//g;
+	}
+	else {
+		$p2Exon = "NA"; 
+	}	
 	if ($strand eq "-" ) { 
 		#swap the exons
 		my $temp = $p1Exon; 
