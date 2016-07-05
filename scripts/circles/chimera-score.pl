@@ -5,30 +5,24 @@ use warnings;
 # usage: chimera-score.pl star_output_dir filter_script.pl
 #  Generally output is piped into filter_circs_v3.pl
 
-$dir=$ARGV[0];  #my star data dir
+my $dir=$ARGV[0];  #my star data dir
 my $prefix=$ARGV[1]; 
 if ($prefix eq "NoPrefix123456789"){
 	$prefix="";
 }
-$sam = $dir . $prefix . "Chimeric.out.sam";
-$junctions = $dir . $prefix . "Chimeric.out.junction";
+my $sam = $dir . $prefix . "Chimeric.out.sam";
+my $junctions = $dir . $prefix . "Chimeric.out.junction";
 my $uniqIDindex_stepsback = $ARGV[2]; 
 
 
-$readcount=0;
-$junctionline=0;
+my $readcount=0;
+my $junctionline=0;
 #print "$junctions\n$sam\n";
 
 #store chimeric.out.junction into memory
 open (JUNCTIONS, "< $junctions") or die $!;
 	@chimeric_out_junctions=<JUNCTIONS>;
 close JUNCTIONS or die $!;
-
-#$tempfile=$dir;
-#$tempfile =~ s/\/$//;
-#$tempfile =~ s/.*\///;
-#$uniqID = $tempfile; 
-#$tempfile = $tempfile . ".temp";
 
 my @dirArray = split(/\//, $dir); 
 my $uniqIDindex = $#dirArray - $uniqIDindex_stepsback + 1 ; 
@@ -77,7 +71,7 @@ open (SAM, "< $sam") or die $!;
 		}
 	}
 &junc_filter($name, $score);
-#print "$name\t$score\n";
+
 #now the filtered circs are in the temp file. 
 close TEMPOUT;
 # sort the tempfile and pipe it into filter circs. 

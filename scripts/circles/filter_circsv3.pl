@@ -48,6 +48,7 @@ while (defined (my $queryline = <STDIN>)) {
 	@line2=@line1;
 	#line1 is the current line, line2 is the previous read
 	@line1=split(/\s+/, $queryline); # 0chrm 1pos 2strand 3chrm 4pos 5strand 6jxn type 78overlap 9score 10cigar
+	#this matches lines, using $wiggle to merge cRNA close but not identical.
 	if ($line1[0] eq $chrm && ( (abs($line1[1] - $pos1) <= $wiggle) || (abs($line1[1] - $pos1) <= $wiggle) ) && ( (abs($line1[4] - $pos2) <= $wiggle) || (abs($line1[4] - $pos2) <= $wiggle ))) { 
 	#match on chrm and positions of introns
 		$legitimate=&check_badpair($line1[1], $line1[4], $line1[10], $queryline);
@@ -163,7 +164,36 @@ sub check_badpair {
 	elsif ($cigarette2 =~ m/p/) {
 		$mycigar = $cigarette2 ; 
 	}
-	else { return("1"); #do something for single ended
+	else { #for single end sequencing : calculate read length, make sure circle is > read length. 
+		my $totaldistance = $p2 - $p1 - 3 ; # p2-p1 is the size of circle + 2 (because positions are 1st intron base). I subtract 3 to give a little buffer space.    
+		my @split = split(//, $bigcigar);  
+		my $readlength = 0; 
+		my $count = ""; 
+		foreach my $x (0..$#split) {
+	                if ($split[$x] =~ m/[\-0-9]/ ) {
+        	                $count .= $split[$x]; #rejoin numbers
+        	        }
+			else { #when we have a complete cigar term
+        	                if ($split[$x] eq "S") {    $readlength += $count ; } 
+        	                elsif ($split[$x] eq "M") { $readlength += $count ; }
+                	        elsif ($split[$x] eq "I") { $readlength += $count ; } 
+   		                #for padding and skipped ref (usually intron) and deletions do nothing
+        	                elsif ($split[$x] eq "p") {  }
+                	        elsif ($split[$x] eq "N") {  }
+                	        elsif ($split[$x] eq "D") {  }
+                	        $count="";
+			}
+                }
+		$readlength = $readlength/2; 
+		if ($readlength < $totaldistance ) {
+			#print "OK\t$fulline\n"; 
+			return("1"); #OK!
+		}
+		else {
+			#print "fail\t$fulline\n"; 
+			return("0");
+		}
+
 	}
 	my $aligned_total=0;
 	#step through the cigar:

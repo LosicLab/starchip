@@ -75,7 +75,8 @@ done
 
 ##  create the list of interesting cRNA to investigate (those cRNA with > reads cutoff and > indiv. cutoff)
 for cutoff in "${cutofflist[@]}" ; do
-	cut -f4,5,8 rawdata/cRNA.cutoff.${cutoff} | sort -k1,1 -k2,2n -k3,3n | uniq -c | awk -v var=${minSubjLimit} '{ if ($1 >= var) print $2,$3,$4,$1 }' > rawdata/circs"${cutoff}"."${minSubjLimit}".investigate
+	cut -f4,5,8 rawdata/cRNA.cutoff.${cutoff} | sort -k1,1 -k2,2n -k3,3n | uniq -c | awk -v var=${minSubjLimit} '{ if ($1 >= var) print $2":"$3"-"$4,$1 }' OFS="\t" \
+	|sort -k2,2nr | ${DIR}/merge_close_crna_1file.pl | sed 's/[: \t-]/ /g' > rawdata/circs"${cutoff}"."${minSubjLimit}".investigate
 	# sed -i '1itotalreads\t+strand\t-strand\tchrm\tpos\tstrand\tchrm\tpos\tstrand\tjxntype\toverlapL\toverlapR\tAvgScore\tLeftScore\tRightScore' ${cutoff}
 done 
 #generates circs"${cutoff}"."${minSubjLimit}".investigate
@@ -103,12 +104,6 @@ for cutoff in ${cutofflist[@]} ; do
 done
 wait 
 
-#generate counts per million. 
-echo "generating counts per million, and transforming your data with voom"
-for f in ${cutofflist[@]} ; do
-	Rscript ${DIR}/cpm.R circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix ${cpmcutoff} ${subjectcpm} &
-done 
-wait 
 
 #Annotate Genes
 if [ ${annotate} == 'true' ] ; then
@@ -121,6 +116,13 @@ if [ ${annotate} == 'true' ] ; then
 		tail -n +2 circRNA.${cutoff}reads.${minSubjLimit}ind.annotated | ${DIR}/summarize_geneinfo.pl > circRNA.${cutoff}reads.${minSubjLimit}ind.genes
 	done
 fi
+
+#generate counts per million. 
+echo "generating counts per million, transforming your data with voom, and generating plots"
+for f in ${cutofflist[@]} ; do
+	Rscript ${DIR}/cpm2.R circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix ${cpmcutoff} ${subjectcpm} circRNA.${cutoff}reads.${minSubjLimit}ind.genes &
+done
+
 
 #splicing
 if [ ${4} == 'true' ] ; then
