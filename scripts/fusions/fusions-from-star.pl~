@@ -133,8 +133,7 @@ $readcount =~ s/^\s+|\s+$//g; #strip whitespace
 
 if ( lc $Configs{"splitReads"} eq "auto" || lc $Configs{"splitReads"} eq "highsensitivity" || lc $Configs{"splitReads"} eq "highprecision" ) {
 	print "Performing Automatic Threshold Targeting For Split Reads\n";
-	#my $cutoff = $readcount / 3000000 ; 
-	my $cutoff = $readcount / 3571429 ; # 0.28 reads per million mapped 
+	my $cutoff = $readcount / 3000000 ; 
 	if ( lc $Configs{"splitReads"} eq "highsensitivity" ) {
                 $cutoff = $readcount / 20000000 ; ## 0.05 reads per million mapped
         }
@@ -144,7 +143,7 @@ if ( lc $Configs{"splitReads"} eq "auto" || lc $Configs{"splitReads"} eq "highse
 	$cutoff = sprintf "%.0f", $cutoff;
 	if ($cutoff < 0 ) { die "Error Calculating read based cutoffs. STAR output Log.final.out reports $readcount reads\n" }
 	if ($cutoff == 0 ) { $cutoff++; }
-	print "Uniquely Mapped Reads:$readcount\nSelected Cutoff: $cutoff\n";
+	print "Uniquly Mapped Reads:$readcount\nSelected Cutoff: $cutoff\n";
 	$Configs{splitReads} = $cutoff;  
 }  
 ##do the same for spanning (paired) reads
@@ -164,17 +163,12 @@ if ( lc $Configs{"spancutoff"} eq "auto" || lc $Configs{"spancutoff"} eq "highse
         $cutoff = sprintf "%.0f", $cutoff;
         if ($cutoff < 0	) { die	"Error Calculating read based cutoffs. STAR output Log.final.out reports $readcount reads\n" }
         if ($cutoff == 0 ) { $cutoff++;	}
-        print "Uniquely Mapped Reads:$readcount\nSelected Cutoff: $cutoff\n";
+        print "Uniquly Mapped Reads:$readcount\nSelected Cutoff: $cutoff\n";
         $Configs{spancutoff} = $cutoff;	 
 } }
 print "\nUsing the following variables:\nPaired-End: $Configs{pairedend}\nSplit Reads Cutoff: $Configs{splitReads}\nUnique Support Values Min: $Configs{uniqueReads}\nSpanning Reads Cutoff: $Configs{spancutoff}\nLocation Wiggle Room (spanning reads): $Configs{wiggle} bp\nLocation Wiggle Room (split reads) : $Configs{overlapLimit} bp\nMin-distance : $Configs{samechrom_wiggle} bp\nRead Distribution upper limit: $Configs{lopsidedupper} X\nRead Distribution lower limit: $Configs{lopsidedlower} X\n";
-if ( $Configs{splitReads} !~ /^[0-9,.E]+$/ ) {
-	die "ERROR: Split Reads value $Configs{splitReads} is not numeric.  Acceptable arguments are: 'auto', 'highprecision', 'highsensitivity', or any number\n";
-} 
-if ( $Configs{spancutoff} !~ /^[0-9,.E]+$/ ) {
-	die "ERROR: Spanning Reads value $Configs{spancutoff} is not numeric.  Acceptable arguments are: 'auto', 'highprecision', 'highsensitivity', or any number\n";
-} 
 
+die ; 
 # primary data format; $chr1_pos1_chr2_pos2_strandA_strandB[0/1/2][0-RL]
 	#where strand is + or -
 	#and [0/1/2] indicates left-side/right-side of fusion/non-split reads

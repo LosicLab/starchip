@@ -44,8 +44,8 @@ limit<-quantile(v_cRNA$E[idx,], probs=.98)
 #make heatmap: don't know if the margins are going to be good with very long sample names in the circ count matrix
 
 pdf(paste(args[1], '_heatmap.pdf', sep=""), height = 10, width = 10)
-my_palette <- colorRampPalette(c("black", "gray", "green"))(n = 20)
-heatmap.2(pmin(v_cRNA$E[idx,], limit), labRow = cfeature[idx], Rowv = T, scale = 'none', Colv = T, trace = 'none', srtCol = 45, cexRow = 0.5, cexCol=0.7, margins = c(10, 20), col = my_palette)
+my_palette <- colorRampPalette(c("red", "black", "green"))(n = 20)
+heatmap.2(pmin(v_cRNA$E[idx,], limit), labRow = cfeature[idx], Rowv = T, scale = 'none', Colv = T, trace = 'none', srtCol = 90, cexRow = 0.5, cexCol=0.7, margins = c(7, 7), col = my_palette)
 
 dev.off()
 

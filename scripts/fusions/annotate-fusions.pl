@@ -257,7 +257,7 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 	print ANNOTATION "\n"; 
 	}
 }
-
+print "For a circos plot, run: Rscript ${script_dir}circos.plot.R $Configs{refbed} $outsumm myCircosPlotName \n"; 
 
 
 ### BEGIN SUBROUTINES ###

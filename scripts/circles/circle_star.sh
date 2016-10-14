@@ -90,19 +90,19 @@ for cutoff in ${cutofflist[@]} ; do
 	rm -f row.names.${cutoff}
 	#create the rown.names files
 	echo "cRNA" >> row.names.${cutoff}
-	while read circ ; do 
+	while read circ ; do
 		circarray=(${circ// / })
 		echo ${circarray[0]}":"${circarray[1]}"-"${circarray[2]} >> row.names.${cutoff}
-	done < rawdata/circs${cutoff}.${minSubjLimit}.investigate   
+	done < rawdata/circs${cutoff}.${minSubjLimit}.investigate
 	#cycle throgh all subject files, create columns
 	rm -f rawdata/backsplices.*grepcircles.temp
 	ls rawdata/backsplices.* | xargs --max-procs=${cpus} -I {} ${DIR}/grep-circles.pl rawdata/circs${cutoff}.${minSubjLimit}.investigate {} count
 	#assemble the matrix by pasting columns
 	paste row.names.${cutoff} rawdata/backsplices.*grepcircles.temp > circRNA.${cutoff}reads.${minSubjLimit}ind.countmatrix
 	#clean up: remove columns
-	rm -f row.names.${cutoff} rawdata/backsplices.*grepcircles.temp 
+	rm -f row.names.${cutoff} rawdata/backsplices.*grepcircles.temp
 done
-wait 
+wait
 
 
 #Annotate Genes

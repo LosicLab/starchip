@@ -33,19 +33,19 @@ my $outanno = $outsumm . ".annotated";
 print "your final outputs will be in $outsumm and $outsumm.annotated\n";
 
 #RUN FUSIONS FROM STAR
-#needs most values.  
-my $fusions_from_star_cmd = $script_dir . "fusions-from-star.pl" . " $ARGV[0] " . $ARGV[1] . " " . $ARGV[2] ; 
-print "$fusions_from_star_cmd\n";
-system("$fusions_from_star_cmd"); 
+	#needs most values.  
+	my $fusions_from_star_cmd = $script_dir . "fusions-from-star.pl" . " $ARGV[0] " . $ARGV[1] . " " . $ARGV[2] ; 
+	print "$fusions_from_star_cmd\n";
+	system("$fusions_from_star_cmd"); 
 #RUN ANNOTATE-FUSIONS
-#check that there are more than just the header line
-open (OUTSUMTEMP, "<$outsummtemp") or die "$! cannot open $outsummtemp\n"; 
-while (<OUTSUMTEMP>) {}; #stores # of lines in $. 
-if ($. > 1) {
-	my $annotate_fusions_cmd = $script_dir . "annotate-fusions.pl" . " $ARGV[0] " . $ARGV[1] . " " . $ARGV[2] ;
-	print "$annotate_fusions_cmd\n"; 
-	system("$annotate_fusions_cmd"); 	
-}
+	#check that there are more than just the header line
+	open (OUTSUMTEMP, "<$outsummtemp") or die "$! cannot open $outsummtemp\n"; 
+	while (<OUTSUMTEMP>) {}; #stores # of lines in $. 
+	if ($. > 1) {
+		my $annotate_fusions_cmd = $script_dir . "annotate-fusions.pl" . " $ARGV[0] " . $ARGV[1] . " " . $ARGV[2] ;
+		print "$annotate_fusions_cmd\n"; 
+		system("$annotate_fusions_cmd"); 	
+	}
 #cleanup
-my $cleanupcmd = "rm $outsummtemp $outannotemp";
-system($cleanupcmd); 
+	my $cleanupcmd = "rm $outsummtemp $outannotemp";
+	system($cleanupcmd); 
