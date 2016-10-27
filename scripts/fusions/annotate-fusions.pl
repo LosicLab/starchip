@@ -183,8 +183,8 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 		#skip CNVs and circular-looking
 		my ($chrom1, $position1, $strand1 ) = split ':', $line[0] ; $chrom1 =~ s/:.*//;  
 		my ($chrom2, $position2, $strand2 ) = split ':', $line[1] ; $chrom2 =~ s/:.*//;  
-		if ($chrom1 ~~ $chrom2) { #same chrom
-			if ($strand1 ~~ $strand2) { #same strand
+		if ($chrom1 eq $chrom2) { #same chrom
+			if ($strand1 eq $strand2) { #same strand
 				#remove circular looking RNA.  If not, widen the fusion positions for the CNV hunt.
 				if ($strand1 eq "-") { 
 					if (($position2 - $position1) < $Configs{circlesize} && ($position2 - $position1) >0) { #ie a back splice
@@ -294,12 +294,12 @@ sub extractSequence {
 ##Left side sequence
 	my $seqpos1; my $seqpos2;
   ##if +
-	if ($strandA~~"+") {
+	if ($strandA eq "+") {
 		$seqpos2 = $posA ;
 		$seqpos1 = $seqpos2 - $readlength;
 	}
   ##if - 
-	if ($strandA~~"-") {
+	if ($strandA eq "-") {
 		$seqpos1 = $posA;
 		$seqpos2 = $seqpos1 +$readlength;
 	}
@@ -307,12 +307,12 @@ sub extractSequence {
 ##Right side sequence
 	my $seqBpos1 ; my $seqBpos2; 
   ##if + 
-	if ($strandB ~~ "+") {
+	if ($strandB eq "+") {
 		$seqBpos1 = $posB;
 		$seqBpos2 = $seqBpos1 + $readlength ; 
 	}
   ##if -
-	if ($strandB ~~ "-") {
+	if ($strandB eq "-") {
 		$seqBpos2 = $posB;
 		$seqBpos1 = $seqBpos2 - $readlength;
 	}
@@ -339,14 +339,14 @@ sub extractSequence {
                 }
 	}
 	my $refseq; 
-	if ($strandA ~~ "-") {
+	if ($strandA eq "-") {
 		my @reverseA=&revcompl($sequenceA);
 		$refseq = join("", @reverseA);
 	}
 	else { 
 		$refseq = $sequenceA; 
 	}
-	if ($strandB ~~ "-") {
+	if ($strandB eq "-") {
                 my @reverseB=&revcompl($sequenceB);
 		$refseq = join("", $refseq, @reverseB); 
         }
@@ -387,24 +387,24 @@ sub SIMSCORE { #input is format chr:pos:+ chr:pos:-
 	open (FASTA, ">$seqfasta") or die $!; 
 	#This time I want the 10bp on either side of the fusion site from both sites.
         ##if +
-        if ($strandA~~"+") {
+        if ($strandA eq "+") {
                 $seqpos2 = ($posA+10);
                 $seqpos1 = $seqpos2 - 20;
         }
         ##if - 
-        if ($strandA~~"-") {
+        if ($strandA eq "-") {
                 $seqpos1 = ($posA-10);
                 $seqpos2 = $seqpos1 +20;
         }
 	my $cmdA = "samtools faidx $Configs{refFasta} '$chrA:$seqpos1-$seqpos2'";
      ##right side
         ##if + 
-        if ($strandB ~~ "+") {
+        if ($strandB eq "+") {
                 $seqBpos1 = ($posB-10);
                 $seqBpos2 = $seqBpos1 + 20 ;
         }
         ##if -
-        if ($strandB ~~ "-") {
+        if ($strandB eq "-") {
                 $seqBpos2 = ($posB+10);
                 $seqBpos1 = $seqBpos2 - 20;
         }
@@ -430,13 +430,13 @@ sub SIMSCORE { #input is format chr:pos:+ chr:pos:-
                         $sequenceB .=$x ;
                 }
         }
-        if ($strandA ~~ "-") {
+        if ($strandA eq "-") {
                 my @reverseA=&revcompl($sequenceA);
 		print FASTA ">seq1\n";
 		print FASTA "@reverseA\n";
         }
         else { print FASTA ">seq1\n$sequenceA\n"; }
-        if ($strandB ~~ "-") {
+        if ($strandB eq "-") {
                 my @reverseB=&revcompl($sequenceB);
 		print FASTA ">seq2\n@reverseB\n";
         }
@@ -448,10 +448,10 @@ sub SIMSCORE { #input is format chr:pos:+ chr:pos:-
 	system($rm_fasta_cmd);
 }
 sub reversestrand {
-	if ($_[0] ~~ "+"){
+	if ($_[0] eq "+"){
 		return "-";
 	}
-	elsif ($_[0] ~~ "-"){
+	elsif ($_[0] eq "-"){
 		return "+";
 	}
 }
@@ -470,16 +470,16 @@ sub revcompl { # operates on all elements passed in
 sub adjustposition { #takes in 0pos, 1strand, 2pos 3strand
 	my $position1;
 	my $position2;
-	if ($_[1] ~~ "+") {
+	if ($_[1] eq "+") {
 		$position1 = $_[0] -1;
 	}
-	elsif ($_[1] ~~ "-") {
+	elsif ($_[1] eq "-") {
 		$position1 = $_[0] +1;
 	}
-	if ($_[3] ~~ "+") {
+	if ($_[3] eq "+") {
 		$position2 = $_[2] +1;
 	}
-	elsif ($_[3] ~~ "-") {
+	elsif ($_[3] eq "-") {
 		$position2 = $_[2] -1;
 	}
 	return ($position1, $position2); 
@@ -488,16 +488,16 @@ sub unadjustposition { #reverse the effect of adjustposition
 	#takes in 0pos, 1strand, 2pos 3strand
 	my $position1;
         my $position2;
-        if ($_[1] ~~ "+") {
+        if ($_[1] eq "+") {
                 $position1 = $_[0] +1;
         }
-        elsif ($_[1] ~~ "-") {
+        elsif ($_[1] eq "-") {
                 $position1 = $_[0] -1;
         }
-        if ($_[3] ~~ "+") {
+        if ($_[3] eq "+") {
                 $position2 = $_[2] -1;
         }
-        elsif ($_[3] ~~ "-") {
+        elsif ($_[3] eq "-") {
                 $position2 = $_[2] +1;
         }
         return ($position1, $position2);

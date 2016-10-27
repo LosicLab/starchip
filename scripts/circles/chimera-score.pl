@@ -48,8 +48,8 @@ open (SAM, "< $sam") or die $!;
 		@samsplit = split(/\s+/, $_);
 		#split the line
 		#0:name #12:hit index #13:alignment score
-		if ($samsplit[0] ~~ $name ) {#ID match
-			if ($samsplit[12] ~~ $hitindex ) {#hitindexmatch
+		if ($samsplit[0] eq $name ) {#ID match
+			if ($samsplit[12] eq $hitindex ) {#hitindexmatch
 				next;
 			}
 			else {#different hitindex
