@@ -8,7 +8,7 @@ consensus = TRUE  # anything but TRUE will make this skip the consensus sequence
 
 splitReads = AUto # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time. Other options are: "auto" , "highsensitivity" , and "highprecision"  
 uniqueReads = 2 # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact).
-spancutoff = autO #minimum number of non-split reads support.  If single end data, this must be 0. Other options are: "auto" , "highsensitivity" , and "highprecision"
+spancutoff = auto #minimum number of non-split reads support.  If single end data, this must be 0. Other options are: "auto" , "highsensitivity" , and "highprecision"
 wiggle = 500  #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
 overlapLimit = 5 #wiggle room for joining very closely called fusion sites.
 samechrom_wiggle = 20000 #this is the distance that fusions have to be from each other if on the same chromosome.  Set to 0 if you want no filtering of same-chromosome pr
