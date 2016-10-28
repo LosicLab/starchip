@@ -1,5 +1,5 @@
 #! /bin/bash
-module load samtools
+#module load samtools
 
 chrom1=$1
 pos1=$2

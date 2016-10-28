@@ -30,7 +30,8 @@ while read line ; do
 	coord1repgrep=$(fgrep -m 1 $coord1 ${1}.p1.rep |awk '{print $2}' )
 	#echo "coord1repgrep is "$coord1repgrep
 	coord2repgrep=$(fgrep -m 1 $coord2 ${1}.p1.rep |awk '{print $2}' )
-	let "repeatssum = $coord1repgrep + $coord2repgrep"
+	#let "repeatssum = $coord1repgrep + $coord2repgrep"
+	((repeatssum = $coord1repgrep + $coord2repgrep))
 	#assign gene annotations to vars. 
 	coord1genegrep=$(fgrep -m 1 $coord1 ${1}.p1.anno )
         if  [[ $? -eq  0 ]] ; then 
