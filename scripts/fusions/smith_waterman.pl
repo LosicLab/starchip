@@ -123,7 +123,7 @@ foreach $i (1..$#iseq) {
 
 
 ##########Printout of the matrix ##################
-#not necassary in starchimp
+#not necassary in starchip
 #open (MYFILE, ">matrix.txt"); #I'm printing the matrix to a tab delimited text file, I think that's more helpful for long sequences than output in the command prompt 80 characters at a time.
 #print MYFILE"|*	";
 #foreach $i (0..$#iseq) { #creating the top line of the score matrix printout

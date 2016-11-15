@@ -7,7 +7,7 @@
 #  8: annotate(true/false)  9:refbed(if annotate==true) 10: prefix on your star output 11: steps back to your data ID. 
 
 if [ "$#" -ne 11 ]; then
-    echo "Illegal number of parameters, please check your paramters file. Note that this script should be run by parent script starchimp-circles.pl"
+    echo "Illegal number of parameters, please check your paramters file. Note that this script should be run by parent script starchip-circles.pl"
     exit 1; 
 fi
 

@@ -5,7 +5,7 @@
 
 #get dir of this script
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-#get directory 2 level up for starchimp-fusions.pl
+#get directory 2 level up for starchip-fusions.pl
 #DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
 #DIR=`echo $DIR |sed 's/\/[a-zA-Z0-9\._-]*$//' `;
 DIR=`echo $DIR |sed 's/\/[^/]*$//' `;
@@ -31,7 +31,7 @@ echo "
 ###BSUB -m manda
 #BSUB -R "rusage[mem=5000]"
 #BSUB -R "span[hosts=1]"
-module load starchimp
-${DIR}/starchimp-fusions.pl data/"${ID}" "${line}" "${params}"
+module load starchip
+${DIR}/starchip-fusions.pl data/"${ID}" "${line}" "${params}"
 " > runfiles/${ID}.lsf
 done < $junctionFiles

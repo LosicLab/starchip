@@ -1,0 +1,15 @@
+##Parameters for starchimp-circles
+readsCutoff = 5
+minSubjectLimit = 10
+cpus = 10
+do_splice = TruE 
+cpmCutoff = 0
+subjectCPMcutoff = 0 
+annotate = true
+refbed = /sc/orga/scratch/akersn01/AMP_AD/refs/Homo_sapiens.GRCh37.70.processed.gtf.bed
+starprefix = accepted_hits
+IDstepsback = 4 ## this is the position from the right of your path of the name of your files.  
+		##for example: /path/to/sample1/star/2.4.2/output/Chimeric.out.junction 
+		##sample1 is 4 steps back.
+		##or /path/to/star/2.4.2/sample1/Chimeric.out.junction
+		#sample1 is 1 step back.  

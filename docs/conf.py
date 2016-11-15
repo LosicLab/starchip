@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# STARChimp Manual documentation build configuration file, created by
+# STARChip Manual documentation build configuration file, created by
 # sphinx-quickstart on Tue Sep  6 18:11:03 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -45,7 +45,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'STARChimp Manual'
+project = u'STARChip Manual'
 copyright = u'2016, Nicholas K. Akers'
 author = u'Nicholas K. Akers'
 
@@ -120,7 +120,7 @@ html_theme = 'alabaster'
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
-#html_title = u'STARChimp Manual v1.1'
+#html_title = u'STARChip Manual v1.1'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -202,7 +202,7 @@ html_static_path = ['_static']
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'STARChimpManualdoc'
+htmlhelp_basename = 'STARChipManualdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -224,7 +224,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'STARChimpManual.tex', u'STARChimp Manual Documentation',
+    (master_doc, 'STARChipManual.tex', u'STARChip Manual Documentation',
      u'Nicholas K. Akers', 'manual'),
 ]
 
@@ -254,7 +254,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'starchimpmanual', u'STARChimp Manual Documentation',
+    (master_doc, 'starchipmanual', u'STARChip Manual Documentation',
      [author], 1)
 ]
 
@@ -268,8 +268,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'STARChimpManual', u'STARChimp Manual Documentation',
-     author, 'STARChimpManual', 'One line description of project.',
+    (master_doc, 'STARChipManual', u'STARChip Manual Documentation',
+     author, 'STARChipManual', 'One line description of project.',
      'Miscellaneous'),
 ]
 

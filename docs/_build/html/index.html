@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>STARChimp Manual &mdash; STARChimp Manual 1.1 documentation</title>
+    <title>STARChip Manual &mdash; STARChip Manual 1.1 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="STARChimp Manual 1.1 documentation" href="#" />
+    <link rel="top" title="STARChip Manual 1.1 documentation" href="#" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -38,8 +38,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="starchimp-manual">
-<h1>STARChimp Manual<a class="headerlink" href="#starchimp-manual" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="starchip-manual">
+<h1>STARChip Manual<a class="headerlink" href="#starchip-manual" title="Permalink to this headline">¶</a></h1>
 <div class="line-block">
 <div class="line">Created by Dr. Nicholas Kipp Akers</div>
 <div class="line">in the laboratory of Professor Bojan Losic</div>
@@ -53,11 +53,11 @@
 </div>
 <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>starchimp was written to work in a *nix shell-like environment, using Bash, Perl, and R extensively.  To use this on Windows, a shell emulator such as Cygwin is likely necessary.  It will probably work in Mac OS, but this is untested and likely there will be formatting issues.  At this point we will assume you are in a *nix shell:
+<p>starchip was written to work in a *nix shell-like environment, using Bash, Perl, and R extensively.  To use this on Windows, a shell emulator such as Cygwin is likely necessary.  It will probably work in Mac OS, but this is untested and likely there will be formatting issues.  At this point we will assume you are in a *nix shell:
 Within the directory you&#8217;d like the software installed:</p>
-<p><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/kippakers/starchimp.git</span></code></p>
-<p>Please ensure that the files in starchimp/bin/ have execute permission:</p>
-<p><code class="docutils literal"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">starchimp/bin/*</span></code></p>
+<p><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/LosicLab/starchip.git</span></code></p>
+<p>Please ensure that the files in starchip/bin/ have execute permission:</p>
+<p><code class="docutils literal"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">starchip/bin/*</span></code></p>
 <p>That&#8217;s it!
 There are a number of software dependencies.  These should be callable without a full path (ie they should be included in your $PATH) :</p>
 <ul class="simple">
@@ -73,16 +73,16 @@ There are a number of software dependencies.  These should be callable without a
 <h1>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="star">
 <h2>STAR<a class="headerlink" href="#star" title="Permalink to this headline">¶</a></h2>
-<p>starchimp is written to be an extension of the STAR read aligner.   It does not itself run STAR on your samples.  Therefore to run starchimp you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is <strong>absolutely critical</strong> however, that you follow the STAR manual&#8217;s instructions and <strong>build a genome using all chromosomes plus unplaced contigs</strong>.  Not doing so will strongly inflate your false positives rate.  Run STAR with the following parameters required for chimeric output: &#8211;chimSegmentMin 15 &#8211;chimJunctionOverhangMin 15.  Your project will have it&#8217;s own requirements, but a good starting point for your star alignments might look like:</p>
+<p>starchip is written to be an extension of the STAR read aligner.   It does not itself run STAR on your samples.  Therefore to run starchip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is <strong>absolutely critical</strong> however, that you follow the STAR manual&#8217;s instructions and <strong>build a genome using all chromosomes plus unplaced contigs</strong>.  Not doing so will strongly inflate your false positives rate.  Run STAR with the following parameters required for chimeric output: &#8211;chimSegmentMin 15 &#8211;chimJunctionOverhangMin 15.  Your project will have it&#8217;s own requirements, but a good starting point for your star alignments might look like:</p>
 <p><code class="docutils literal"><span class="pre">STAR</span> <span class="pre">--genomeDir</span> <span class="pre">/path/to/starIndex/</span> <span class="pre">--readFilesIn</span> <span class="pre">file1_1.fastq.gz</span> <span class="pre">file1_2.fastq.gz</span> <span class="pre">--runThreadN</span> <span class="pre">11</span> <span class="pre">--outReadsUnmapped</span> <span class="pre">Fastx</span> <span class="pre">--quantMode</span> <span class="pre">GeneCounts</span>
 <span class="pre">--chimSegmentMin</span> <span class="pre">15</span> <span class="pre">--chimJunctionOverhangMin</span> <span class="pre">15</span> <span class="pre">--outSAMstrandField</span> <span class="pre">intronMotif</span> <span class="pre">--readFilesCommand</span> <span class="pre">zcat</span> <span class="pre">--outSAMtype</span> <span class="pre">BAM</span> <span class="pre">Unsorted</span></code></p>
 </div>
 <div class="section" id="reference-bed-files">
 <h2>Reference/BED Files<a class="headerlink" href="#reference-bed-files" title="Permalink to this headline">¶</a></h2>
-<p>STARChimp makes use of gtf files for annotating fusions and cRNA with gene names.  However, we require them in ucsc bed file format.  We also require a bedtools .genome file to aid in sorting.  These can automatically be generating from your gtf file using the command:</p>
-<p><code class="docutils literal"><span class="pre">/starchimp/bin/gtf2bed.sh</span> <span class="pre">/path/to/your/file.gtf</span> <span class="pre">/path/to/your/genome.fasta</span> <span class="pre">/path/to/desired/output/dir/</span></code></p>
+<p>STARChip makes use of gtf files for annotating fusions and cRNA with gene names.  However, we require them in ucsc bed file format.  We also require a bedtools .genome file to aid in sorting.  These can automatically be generating from your gtf file using the command:</p>
+<p><code class="docutils literal"><span class="pre">/starchip/scripts/setup/gtf2bed.sh</span> <span class="pre">/path/to/your/file.gtf</span> <span class="pre">/path/to/your/genome.fasta</span> <span class="pre">/path/to/desired/output/dir/</span></code></p>
 <p>GTF and FASTA files can be downloaded from Ensembl, UCSC, gencode, refseq, and other online sources.  It is recommended to use the same GTF and FASTA that your STAR index was built with.</p>
-<p>starchimp-fusions filters using the location of known repeats in bed format as well.  This file will be large (~300MB for human), and can be downloaded from the UCSC table browser:</p>
+<p>starchip-fusions filters using the location of known repeats in bed format as well.  This file will be large (~300MB for human), and can be downloaded from the UCSC table browser:</p>
 <ol class="arabic simple">
 <li>Go to <a class="reference external" href="http://genome.ucsc.edu/cgi-bin/hgTables">http://genome.ucsc.edu/cgi-bin/hgTables</a></li>
 <li>Change &#8216;genome&#8217; to your desired genome</li>
@@ -95,10 +95,11 @@ There are a number of software dependencies.  These should be callable without a
 </ol>
 </li>
 <li>Click &#8216;get output&#8217; to download your bed file.</li>
+<li>On your local machine sort the bed file: sort -k 1,1 -k2,2n repeats.bed &gt; repeats.sorted.bed</li>
 </ol>
-<p>starchimp-fusions can also make use of known antibody parts, and copy number variants.  These files come with starchimp for human hg19 and hg38 in the data directory.  For other species you can create your own in the simple format:</p>
+<p>starchip-fusions can also make use of known antibody parts, and copy number variants.  These files come with starchip for human hg19 and hg38 in the reference directory.  For other species you can create your own in the simple format:</p>
 <p><code class="docutils literal"><span class="pre">Chromosome</span>&nbsp;&nbsp;&nbsp; <span class="pre">StartPosition</span>&nbsp;&nbsp; <span class="pre">EndPosition</span></code></p>
-<p>Finally, starchimp-fusions uses known gene families and known/common false-positive pairs to filter out fusions which are likely mapping errors or PCR artifacts.  Family data can be downloaded from ensembl biomart:</p>
+<p>Finally, starchip-fusions uses known gene families and known/common false-positive pairs to filter out fusions which are likely mapping errors or PCR artifacts.  Family data can be downloaded from ensembl biomart:</p>
 <ol class="arabic simple">
 <li>Go to <a class="reference external" href="http://www.ensembl.org/biomart/martview">http://www.ensembl.org/biomart/martview</a></li>
 <li>Database: Ensembl Genes</li>
@@ -118,23 +119,23 @@ There are a number of software dependencies.  These should be callable without a
 </div>
 <div class="section" id="parameter-files">
 <h2>Parameter Files<a class="headerlink" href="#parameter-files" title="Permalink to this headline">¶</a></h2>
-<p>starchimp-fusions and starchimp-circles rely on parameter files to supply all the information to complete a successful run.  Examples are given in the paramfiles directory, however <strong>you need to customize a parameter file for each run</strong>.  Not doing so is akin to buying shoes without specifying what style or size of shoe you desire.  All required and optional parameters are explained here.  We recommend you copy an example parameter file to your working directory and edit it there.   All parameter values are explained at the end of the manual.</p>
+<p>starchip-fusions and starchip-circles rely on parameter files to supply all the information to complete a successful run.  Examples are given in the paramfiles directory, however <strong>you need to customize a parameter file for each run</strong>.  Not doing so is akin to buying shoes without specifying what style or size of shoe you desire.  All required and optional parameters are explained here.  We recommend you copy an example parameter file to your working directory and edit it there.   All parameter values are explained at the end of the manual.</p>
 </div>
 </div>
-<div class="section" id="running-starchimp">
-<h1>Running STARChimp<a class="headerlink" href="#running-starchimp" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="starchimp-fusions">
-<h2>STARChimp-Fusions<a class="headerlink" href="#starchimp-fusions" title="Permalink to this headline">¶</a></h2>
-<p>starchimp-fusions is run on individual samples.</p>
-<p><code class="docutils literal"><span class="pre">/path/to/starchimp/bin/starchimp-fusions.pl</span> <span class="pre">output_seed</span> <span class="pre">Chimeric.out.junction</span> <span class="pre">Paramters.txt</span></code></p>
+<div class="section" id="running-starchip">
+<h1>Running STARChip<a class="headerlink" href="#running-starchip" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="starchip-fusions">
+<h2>STARChip-Fusions<a class="headerlink" href="#starchip-fusions" title="Permalink to this headline">¶</a></h2>
+<p>starchip-fusions is run on individual samples.</p>
+<p><code class="docutils literal"><span class="pre">/path/to/starchip/bin/starchip-fusions.pl</span> <span class="pre">output_seed</span> <span class="pre">Chimeric.out.junction</span> <span class="pre">Paramters.txt</span></code></p>
 <p>output_seed is the unique preface to your output file; e.g. sample1, or output/sample1
 Chimeric.out.junction is the full path to your STAR output file Chimeric.out.junction.
 Parameters.txt is your unique parameters file for this job.</p>
 </div>
-<div class="section" id="starchimp-circles">
-<h2>STARChimp-Circles<a class="headerlink" href="#starchimp-circles" title="Permalink to this headline">¶</a></h2>
-<p>starchimp-circles is run on groups of samples.</p>
-<p><code class="docutils literal"><span class="pre">/path/to/starchimp/bin/starchimp-circles.pl</span> <span class="pre">STARdirs.txt</span> <span class="pre">Parameters.txt</span></code></p>
+<div class="section" id="starchip-circles">
+<h2>STARChip-Circles<a class="headerlink" href="#starchip-circles" title="Permalink to this headline">¶</a></h2>
+<p>starchip-circles is run on groups of samples.</p>
+<p><code class="docutils literal"><span class="pre">/path/to/starchip/bin/starchip-circles.pl</span> <span class="pre">STARdirs.txt</span> <span class="pre">Parameters.txt</span></code></p>
 <p>STARdirs.txt is a text file with a full path to one STAR output directory per line
 Parameters.txt is your parameters file for this job.</p>
 </div>
@@ -161,16 +162,16 @@ Parameters.txt is your parameters file for this job.</p>
 <td>True/false : do you want a consensus sequence generated for your fusions? Should be true unless you cannot use mafft or samtools for some reason</td>
 </tr>
 <tr class="row-even"><td>splitReads</td>
-<td>Integer.  Number of minimum reads that cross fusion border.  Can put &#8216;auto&#8217; to have starchimp make a best guess for your sample.</td>
+<td>Integer.  Number of minimum reads that cross fusion border.  Can put &#8216;auto&#8217; to have starchip make a best guess for your sample.</td>
 </tr>
 <tr class="row-odd"><td>spancutoff</td>
-<td>Integer. Number of minimum paired ends to map to opposite ends of a fusion without crossing the fusion site.  Can put &#8216;auto&#8217; to have starchimp make a best guess for your sample.</td>
+<td>Integer. Number of minimum paired ends to map to opposite ends of a fusion without crossing the fusion site.  Can put &#8216;auto&#8217; to have starchip make a best guess for your sample.</td>
 </tr>
 <tr class="row-even"><td>uniqueReads</td>
 <td>Integer.  Number of minimum unique reads that cross fusion border.  Useful for eliminating fusions whose support comes from a single PCR amplicon.</td>
 </tr>
 <tr class="row-odd"><td>wiggle</td>
-<td>Integer.  Reads mapping to opposite ends of a fusion without crossing the fusion junction itself have ambiguous fusion site.  Starchimp looks for fusions within &#8216;wiggle&#8217; bp of the ambiguous fusion site to share</td>
+<td>Integer.  Reads mapping to opposite ends of a fusion without crossing the fusion junction itself have ambiguous fusion site.  Starchip looks for fusions within &#8216;wiggle&#8217; bp of the ambiguous fusion site to share</td>
 </tr>
 <tr class="row-even"><td>overlapLimit</td>
 <td>Integer.  Fusions called less than overlapLimit bp from each other will be merged.</td>
@@ -179,13 +180,13 @@ Parameters.txt is your parameters file for this job.</p>
 <td>Integer.  Intrachromosomal fusions must be at least this value apart to be reported.</td>
 </tr>
 <tr class="row-even"><td>lopsidedupper</td>
-<td>Float. Starchimp will filter out fusions that are imbalanced in the number of reads on one strand vs another.  With unstranded RNA-seq, we expect roughly equal reads to map to the &#8216;top&#8217; strand vs the &#8216;bottom&#8217; strand.  Using the equation: ratio = (top side reads + 0.1) / (bottom side reads + 0.1).  ratio must be below &#8216;lopsidedupper&#8217; and above &#8216;lopsidedlower&#8217;</td>
+<td>Float. Starchip will filter out fusions that are imbalanced in the number of reads on one strand vs another.  With unstranded RNA-seq, we expect roughly equal reads to map to the &#8216;top&#8217; strand vs the &#8216;bottom&#8217; strand.  Using the equation: ratio = (top side reads + 0.1) / (bottom side reads + 0.1).  ratio must be below &#8216;lopsidedupper&#8217; and above &#8216;lopsidedlower&#8217;</td>
 </tr>
 <tr class="row-odd"><td>lopsidedlower</td>
 <td>see above.</td>
 </tr>
 <tr class="row-even"><td>genome  String.</td>
-<td>Starchimp will look for files in the data directory bearing this genome ID.  For example, genome = hg19 will cause starchimp to look for and use data/hg19.abparts and data/hg19.cnvs.</td>
+<td>Starchip will look for files in the data directory bearing this genome ID.  For example, genome = hg19 will cause starchip to look for and use data/hg19.abparts and data/hg19.cnvs.</td>
 </tr>
 <tr class="row-odd"><td>cnvwiggle</td>
 <td>Integer. Skip fusions with an edge within &#8216;cnvwiggle&#8217; bp of a known cnv.</td>
@@ -274,7 +275,7 @@ Parameters.txt is your parameters file for this job.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">STARChimp Manual</a></li>
+<li><a class="reference internal" href="#">STARChip Manual</a></li>
 <li><a class="reference internal" href="#introduction">Introduction</a></li>
 <li><a class="reference internal" href="#installation">Installation</a></li>
 <li><a class="reference internal" href="#setup">Setup</a><ul>
@@ -283,9 +284,9 @@ Parameters.txt is your parameters file for this job.</p>
 <li><a class="reference internal" href="#parameter-files">Parameter Files</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#running-starchimp">Running STARChimp</a><ul>
-<li><a class="reference internal" href="#starchimp-fusions">STARChimp-Fusions</a></li>
-<li><a class="reference internal" href="#starchimp-circles">STARChimp-Circles</a></li>
+<li><a class="reference internal" href="#running-starchip">Running STARChip</a><ul>
+<li><a class="reference internal" href="#starchip-fusions">STARChip-Fusions</a></li>
+<li><a class="reference internal" href="#starchip-circles">STARChip-Circles</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#complete-parameter-explanations">Complete Parameter Explanations</a><ul>
