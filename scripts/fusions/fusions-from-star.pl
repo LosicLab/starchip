@@ -149,7 +149,7 @@ if ( lc $Configs{"splitReads"} eq "auto" || lc $Configs{"splitReads"} eq "highse
 }  
 ##do the same for spanning (paired) reads
 if ( lc $Configs{"spancutoff"} eq "auto" || lc $Configs{"spancutoff"} eq "highsensitivity" || lc $Configs{"spancutoff"} eq "highprecision" ) {EXITER:{
-        print "Performing Automatic Threshold Targeting For Spanning Read (PAIRED END DATA) \n";
+        print "Performing Automatic Threshold Targeting For Spanning Reads\n";
 	if ( lc $Configs{"pairedend"} ne "true" ) { $Configs{spancutoff} =0; print "Paired-End config not set to TRUE, setting limits for single-end data\n" ; last EXITER;} 
 	my $cutoff = $readcount / 3000000 ; # 0.33 reads per million mapped
 	#this choice of reads/7.5M is somewhate arbitrary.  The ratio of split/span reads should be a function of:
@@ -281,7 +281,7 @@ EXITHERE: while (my $x = <JUNCTION>) {
 	#if ($linecount > 10 ) { die; }
 }
 my $numbkeys = scalar keys %fusions;
-print "Finished catologing fusion reads, now processing over $numbkeys\n";
+print "Finished catologing fusion reads, now processing over $numbkeys potential fusion sites\n";
 close(JUNCTION);
 ##Post Processing and Filtering
 ##currently, the process goes: create file.summary this file gets annotated (file.summary.annotated), and then this annotated file gets filtered and reduced to a new file, named file.summary
@@ -360,9 +360,8 @@ for my $key (keys %fusions) {#go through all 'fusions'
 				# STAR outputs in columns 2,4 the 1st base of the intron around a fusion site.  I think the 1st base that we see is more intuitive.  So here I adjust.  
 				($position1, $position2) = &adjustposition($keyarray[1],$keyarray[4],$keyarray[3],$keyarray[5]);
 				#0:split reads, 1:topsidesplit, 2:bottomsidesplit 3:spanreads 4;topspan 5;bottomspan 6:skew 7:chr1 8;loc1 9;strand1 10;chr2; 11;loc2; 12;strand2
-				#print "$splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],,$keyarray[2],$position2,$keyarray[5])\n";
+				#The score is a work in progress.  
 				my $score = &fusionScore($splitreads,$fusions{$key}[2][1],$fusions{$key}[2][2],$spancount,$topspancount, $bottomspancount,$skew,$keyarray[0],$position1,$keyarray[4],$keyarray[2],$position2,$keyarray[5]);
-				
 				##Output. This can be changed as needed, but the first two columns need to be chr1:pos:str.  They are fed into coordinates2genes.sh for gene annotation later.  
 				print SUMMTEMP "$keyarray[0]:$position1:$keyarray[4]\t$keyarray[2]:$position2:$keyarray[5]\t$score\t$spancount\t$splitreads\t$fusions{$key}[2][1]\t$fusions{$key}[2][2]\t$fusions{$key}[2][3]\t$fusions{$key}[2][4]\t$unique0\t$unique1\t$kurtosis\t$skew\t$leftanchor\t$rightanchor\t$topspancount\t$bottomspancount\n";
 				print "Filtered fusions count:$fusioncounter, searched $keycount\n";

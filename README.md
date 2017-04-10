@@ -9,6 +9,19 @@ Please see http://starchip.readthedocs.io/en/latest/ for complete STARChip docum
 
 Currently, there are two main modules, which need to be run separately. 
 
+###########
+## Setup ##
+###########
+
+Both Fusions and Circles require a completed STAR run with chimeric output turned on.  I STRONGLY recommend using the same fasta and gtf files to build your STAR index and run STARChip.    
+You will need to run /path/to/starchip/scripts/setup/gtf2bed.sh to create gtf files in bed format as well as .genome files:
+	
+		Usage: gtf2bed.sh /path/to/my.gtf  /path/to/my.fasta /path/to/desired/output_directory/
+
+This will create a a my.gtf.bed file and a my.gtf.exons.bed file.  The only difference is that the 2nd file is restricted to gtf lines that have exon information, excluding annotations like full transcripts.  This will only affect your annotations, but I reccomend the exons file for the best annotations.   
+
+You will also need to create parameters files for your run.  See examples in /starchip/paramfiles/ or the manual for complete details.
+
 ###############
 ##  Fusions  ##
 ###############
@@ -84,17 +97,5 @@ Output:
 		Consise Gene Annotation + Splice Type:  circRNA.[readthreshold]reads.[subjectthreshold]ind.genes
 	There are other files as well stored in rawdata/ but they are mostly useful only if you need to really dig into the data. 
 
-###########
-## Setup ##
-###########
-
-Both Fusions and Circles require a completed STAR run with chimeric output turned on.  I STRONGLY recommend using the same fasta and gtf files to build your STAR index and run STARChip.    
-You will need to run /path/to/starchip/scripts/setup/gtf2bed.sh to create gtf files in bed format as well as .genome files:
-	
-		Usage: gtf2bed.sh /path/to/my.gtf  /path/to/my.fasta /path/to/desired/output_directory/
-
-This will create a a my.gtf.bed file and a my.gtf.exons.bed file.  The only difference is that the 2nd file is restricted to gtf lines that have exon information, excluding annotations like full transcripts.  This will only affect your annotations, but I reccomend the exons file for the best annotations.   
-
-You will also need to create parameters files for your run.  See examples in /starchip/paramfiles/ or the manual for complete details.
 
 

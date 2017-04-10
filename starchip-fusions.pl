@@ -41,11 +41,11 @@ print "your final outputs will be in $outsumm and $outsumm.annotated\n";
 	#check that there are more than just the header line
 	open (OUTSUMTEMP, "<$outsummtemp") or die "$! cannot open $outsummtemp\n"; 
 	while (<OUTSUMTEMP>) {}; #stores # of lines in $. 
-	if ($. > 1) {
+	if ($. > 0) {
 		my $annotate_fusions_cmd = $script_dir . "annotate-fusions.pl" . " $ARGV[0] " . $ARGV[1] . " " . $ARGV[2] ;
 		print "$annotate_fusions_cmd\n"; 
 		system("$annotate_fusions_cmd"); 	
 	}
 #cleanup
-	my $cleanupcmd = "rm $outsummtemp $outannotemp";
+	my $cleanupcmd = "rm -f $outsummtemp $outannotemp";
 	system($cleanupcmd); 

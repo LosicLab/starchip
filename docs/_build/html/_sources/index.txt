@@ -36,7 +36,7 @@ Setup
 
 STAR
 ----- 
-starchip is written to be an extension of the STAR read aligner.   It does not itself run STAR on your samples.  Therefore to run starchip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin 15 --chimJunctionOverhangMin 15.  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
+starchip is written to be an extension of the STAR read aligner.   It does not itself run STAR on your samples.  Therefore to run starchip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin 15 --chimJunctionOverhangMin 15.  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
 
 ``STAR --genomeDir /path/to/starIndex/ --readFilesIn file1_1.fastq.gz file1_2.fastq.gz --runThreadN 11 --outReadsUnmapped Fastx --quantMode GeneCounts 
 --chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand zcat --outSAMtype BAM Unsorted``
@@ -62,7 +62,7 @@ starchip-fusions filters using the location of known repeats in bed format as we
 	e) output file: some reasonable name.bed
 
 4.	Click \'get output\' to download your bed file.  
-5.	On your local machine sort the bed file: sort -k 1,1 -k2,2n repeats.bed > repeats.sorted.bed
+5.	On your local machine sort the bed file: sort -k1,1 -k2,2n repeats.bed > repeats.sorted.bed
 
 starchip-fusions can also make use of known antibody parts, and copy number variants.  These files come with starchip for human hg19 and hg38 in the reference directory.  For other species you can create your own in the simple format:
 

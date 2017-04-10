@@ -129,15 +129,15 @@ while (my $x = <JUNCTION>) {
         my $lengthB = &splitCigar($cigarB);
         if ($lengthA == $lengthB) {
                 $readlength=$lengthA;
-                print "Read length appears to be $readlength\n";
+                #print "Read length appears to be $readlength\n";
         }	
         elsif ($lengthA == (2*$lengthB)) {
                 $readlength=$lengthB;
-                print "Read length appears to be $readlength\n";
+                #print "Read length appears to be $readlength\n";
         }
         elsif ($lengthB == (2*$lengthA)) {
                 $readlength=$lengthA;
-                print "Read length appears to be $readlength\n";
+                #print "Read length appears to be $readlength\n";
         }
         else { print "read length error, please check input.  Using 100bp as a guess.\n";
                 $readlength=100;
@@ -156,10 +156,15 @@ system($annotate_command);
 
 #remove same gene fusions, simplify output
 open ANNOTEMP, "<$outannotemp" or die $!;
+my $annotemplines = $. ;
 open SUMM, ">$outsumm" or die $!;
 open ANNOTATION, ">$outanno" or die $!; 
-print SUMM "Partner1\tPartner2\tScore\tDiscordantReads\tSplitReads\tAvgAS\tNearGene1\tDistance1\tNearGene2\tDistance2\tConsensusSeq\n";
+print SUMM "Partner1\tPartner2\tSpanningReads\tSplitReads\tAvgAS\tNearGene1\tDistance1\tNearGene2\tDistance2\tConsensusSeq\n";
 print ANNOTATION "Partner1\tPartner2\tScore\tSpanningReads\tSplitReads\tTopsideCrossing\tBottomsideCrossing\tChromAAnchors\tChromBAnchors\tUniqueSupportLeft\tUniqueSupportRight\tKurtosis\tSkew\tLeftAnchor\tRightAnchor\tTopsideSpanning\tBottomsideSpanning\tRepeats\tID1\tGeneInfo1\tDistance1\tID2\tGeneInfo2\tDistance2\tReferenceSequence\tConsensusSequence\tAvgAlignScore\n";
+if ($annotemplines == 0) {
+	print "No fusions discovered.  Consider lowering read requirements to increase sensitivity.\n";
+	die; 
+}
 my $maxAS= $readlength/2;
 my $minAS= 15; #this 15 is a changeable star parameter (--chimSegmentMin 15) 
 my $avgAStarget= ($maxAS+$minAS)/2;  #a great fusion would have this average overhang.  (~32 for 100bp reads)
@@ -247,7 +252,7 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 			$OverhangScoreMod = $ASdifference/$ASrange ; 
 		}
 		$score = $score*($OverhangScoreMod);  #fairly heuristic.  Example : average overhang = 20 and read length 100: ScoreMod = 0.286 = (20-15)/(32.5-15)      
-		print SUMM "$line[0]\t$line[1]\t$score\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq";
+		print SUMM "$line[0]\t$line[1]\t$line[3]\t$line[4]\t$alignScore\t$gene1name[0]\t$dist1\t$gene2name[0]\t$dist2\t$consSeq";
 		print ANNOTATION "$x\t$refseq\t$consSeq\t$alignScore";
 		#get consensus sequence
 		if ($Configs{simscore} eq 'TRUE') {
