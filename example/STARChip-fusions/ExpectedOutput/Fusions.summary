@@ -1,0 +1,2 @@
+Partner1	Partner2	SpanningReads	SplitReads	AvgAS	NearGene1	Distance1	NearGene2	Distance2	ConsensusSeq
+chr17:78782202:-	chr8:116756019:-	30	11	30.2	CYTH1	0	EIF3H	0	ctactgtacattttcgacctctttccgatggaatgatcgtagctgtcgtcctcct*catggtg*gggagccgggctccgcgctccggctcgccgctgg

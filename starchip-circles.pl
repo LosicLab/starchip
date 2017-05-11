@@ -48,7 +48,7 @@ else {
 if (lc $Configs{annotate} eq "true") { 
 	$Configs{annotate}="true"; 
 	unless (-e $Configs{refbed}) { #unless the refbed file exists
- 		die "Could not find file $Configs{refbed} needed for cRNA gene annotation\n";
+ 		die "Could not find file $Configs{refbed} needed for cRNA gene annotation\nCreate one with setup.sh or change annotate to false\n";
  	} 
 }
 elsif (lc $Configs{annotate} eq "false") { 
@@ -59,11 +59,28 @@ else {
 	print "annotate parameter should be true or false\n";
 	die;
 }
+unless (-e $Configs{refFasta}) { #unless the reference fasta file exists 
+	die "Could not find the reference fasta at $Configs{refFasta}, please provide one in your configs file and rerun\n"; 
+}
 if ($Configs{starprefix} eq "" ) { 
 	$Configs{starprefix}="NoPrefix123456789"
 }
+if (lc $Configs{runSTAR} eq "true") { 
+	$Configs{runSTAR}="true"; 
+	if (-d $Configs{STARgenome} ) { 
+		#that's good 
+	}
+	else { print "Error: STAR genome $Configs{STARgenome} does not exist/is not a directory\n"; die ;}
+}
+elsif (lc $Configs{runSTAR} eq "false") { 
+	$Configs{runSTAR}="false";
+	$Configs{STARgenome}="NA"; 
+	$Configs{STARreadcommand}="NA";	
+}
+else { print "runSTAR parameter should be true or false\n"; die ; } 
 
-my $run_cmd = "$script_dir/circle_star.sh $Configs{readsCutoff} $Configs{minSubjectLimit} $ARGV[0] $Configs{do_splice} $Configs{cpus} $Configs{cpmCutoff} $Configs{subjectCPMcutoff} $Configs{annotate} $Configs{refbed} $Configs{starprefix} $Configs{IDstepsback}" ; 
-print "$run_cmd\n"; 
+
+my $run_cmd = "$script_dir/circle_star.sh $Configs{readsCutoff} $Configs{minSubjectLimit} $ARGV[0] $Configs{do_splice} $Configs{cpus} $Configs{cpmCutoff} $Configs{subjectCPMcutoff} $Configs{annotate} $Configs{refbed} $Configs{starprefix} $Configs{IDstepsback} $Configs{runSTAR} $Configs{STARgenome} $Configs{STARreadcommand} $Configs{refFasta}" ; 
+#print "$run_cmd\n"; 
 system($run_cmd); 
 

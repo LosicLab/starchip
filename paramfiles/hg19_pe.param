@@ -6,7 +6,7 @@ pairedend = TRUE  #TRUE means paired end data.  any other value means single end
 consensus = TRUE  # anything but TRUE will make this skip the consensus sequence generation for each fusion.
 ## Filters, Cutoffs 
 
-splitReads = AUto # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time.   Other options are: "auto" , "highsensitivity" , and "highprecision"
+splitReads = Auto # number of minimum read support at jxn.  Minimum 2.  With more read depth, scale up.  Greatly impacts running time.   Other options are: "auto" , "highsensitivity" , and "highprecision"
 uniqueReads = 2 # number of unique read support values (higher indicates more likely to be real. lower is more likely amplification artifact).
 spancutoff = 1 #minimum number of non-split reads support.  If single end data, this must be 0 or auto. Other options are: "auto" , "highsensitivity" , and "highprecision"
 wiggle = 500  #number of base-pairs of 'wiggle-room' when determining the location of a fusion (for spanning read counts)
@@ -18,12 +18,12 @@ cnvwiggle = 1000 #we skip fusions that can be explained by known cnvs.  how clos
 circlesize = 100000 #we skip fusions that look more like circular rna/backsplices.  how big (bp) could a circle be?    
 
 ## Local Reference Files:
-	#refbed is a bed format version of a gtf.  This should probably be derived from the same GTF that STAR aligned with.   
-refbed=/sc/orga/projects/PBG/REFERENCES/hg19/starchimp/Homo_sapiens.GRCh37.74.chr.test.gtf.bed
+	#refbed is a bed format version of a gtf.  This should probably be derived from the same GTF that STAR aligned with using setup.sh.   
+refbed=/path/to/Homo_sapiens.GRCh37.74.gtf.bed
         # a bed format list of known repeats
-repeatbed=/sc/orga/work/akersn01/ref/repeats_hg19plus.bed
+repeatbed=/path/to/repeats_hg19plus.bed
         # fasta reference.  should be indexed (run 'samtools faidx file.fa')
-refFasta = /sc/orga/projects/losicb01a/common_folder/ref/hg19/fasta/ucsc_hg19_dna_primary.fa
+refFasta = /path/to/ucsc_hg19_dna_primary.fa
 abparts = reference/hg19.abparts
 cnvs = reference/conrad_hg19.cnvs
 familyfile = reference/ensfams.txt

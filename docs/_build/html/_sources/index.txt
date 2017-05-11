@@ -155,8 +155,12 @@ cpmCutoff		Float. Reads counts are loaded into R and log2(CountsPerMillion) is c
 subjectCPMcutoff	Integer.  See above.  This value is the lower limit for number of individuals required to have the cRNA expressed at a value higher than cpmCutoff. 
 annotate		true/false.  Should cRNA be given gene annotations?  Uses refbed.  
 refbed			String.  The bed file generated earlier with gtf2bed.sh.	
+refFasta	   	String.  A genome fasta file (preferably the one used to build the STAR index).  If not the same it MUST be the same genome build and it must have the same chromosome identifiers.  
 starprefix		String.  If you used the star parameter --outFileNamePrefix, give that value here.  E.g. if your star output has a file named \"mydata_Chimeric.out.junction\"  then put \"mydata\_\" for starprefix.
 IDstepsback		Integer.  Where in your pathway (position from the right) is the sample identifier.  For example if your star output for **sample1** is in the directory at: |br| /path/to/**sample1**/star/2.4.2/output/Chimeric.out.junction |br| Your IDstepsback is 4.  Alternatively the path |br| /path/to/star/2.4.2/**sample1**/Chimeric.out.junction |br| has IDstepsback value of 1.  
+runSTAR 		true/false.  Should STARChip perform alignment of fastq files and realignment with circRNA genomic insertions? If true, provide fastq files, not STAR directories.  
+STARgenome		String.  Path to STAR genome to align to.  Only used if runSTAR is true.
+STARreadcommand		String.  Command for STAR to read fastq files.  zcat for .gz, cat for .fastq, etc.   
 ================	================================================================================
 
 .. |br| raw:: html

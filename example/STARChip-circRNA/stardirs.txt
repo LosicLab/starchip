@@ -1,0 +1,2 @@
+STARout/sample1
+STARout/sample2

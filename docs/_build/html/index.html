@@ -255,11 +255,23 @@ Parameters.txt is your parameters file for this job.</p>
 <tr class="row-odd"><td>refbed</td>
 <td>String.  The bed file generated earlier with gtf2bed.sh.</td>
 </tr>
-<tr class="row-even"><td>starprefix</td>
+<tr class="row-even"><td>refFasta</td>
+<td>String.  A genome fasta file (preferably the one used to build the STAR index).  If not the same it MUST be the same genome build and it must have the same chromosome identifiers.</td>
+</tr>
+<tr class="row-odd"><td>starprefix</td>
 <td>String.  If you used the star parameter &#8211;outFileNamePrefix, give that value here.  E.g. if your star output has a file named &#8220;mydata_Chimeric.out.junction&#8221;  then put &#8220;mydata_&#8221; for starprefix.</td>
 </tr>
-<tr class="row-odd"><td>IDstepsback</td>
+<tr class="row-even"><td>IDstepsback</td>
 <td>Integer.  Where in your pathway (position from the right) is the sample identifier.  For example if your star output for <strong>sample1</strong> is in the directory at: <br /> /path/to/<strong>sample1</strong>/star/2.4.2/output/Chimeric.out.junction <br /> Your IDstepsback is 4.  Alternatively the path <br /> /path/to/star/2.4.2/<strong>sample1</strong>/Chimeric.out.junction <br /> has IDstepsback value of 1.</td>
+</tr>
+<tr class="row-odd"><td>runSTAR</td>
+<td>true/false.  Should STARChip perform alignment of fastq files and realignment with circRNA genomic insertions? If true, provide fastq files, not STAR directories.</td>
+</tr>
+<tr class="row-even"><td>STARgenome</td>
+<td>String.  Path to STAR genome to align to.  Only used if runSTAR is true.</td>
+</tr>
+<tr class="row-odd"><td>STARreadcommand</td>
+<td>String.  Command for STAR to read fastq files.  zcat for .gz, cat for .fastq, etc.</td>
 </tr>
 </tbody>
 </table>

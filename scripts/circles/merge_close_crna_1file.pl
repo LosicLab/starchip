@@ -12,15 +12,25 @@ my %cRNA_hash;
 BIGLOOP: while (my $x = <>) {
 	chomp $x;
 	my ($chrom, $pos1, $pos2) = split(/[:\-\t]/, $x);
-	foreach my $cRNAIDs (keys %cRNA_hash) {
-		if (exists $cRNA_hash{$cRNAIDs}{$chrom}[0]) {
-			if (abs($cRNA_hash{$cRNAIDs}{$chrom}[0] - $pos1) <= $distancemax && abs($cRNA_hash{$cRNAIDs}{$chrom}[1] - $pos2) <= $distancemax ) {
-				next BIGLOOP;
-			}
-		}
-	}
-	$cRNA_hash{$x}{$chrom}[0]=$pos1;
-	$cRNA_hash{$x}{$chrom}[1]=$pos2;
+#	foreach my $cRNAIDs (keys %cRNA_hash) {
+#		if (exists $cRNA_hash{$cRNAIDs}{$chrom}[0]) {
+#			if (abs($cRNA_hash{$cRNAIDs}{$chrom}[0] - $pos1) <= $distancemax && abs($cRNA_hash{$cRNAIDs}{$chrom}[1] - $pos2) <= $distancemax ) {
+#				next BIGLOOP;
+#			}
+#		}
+#	}
+#	$cRNA_hash{$x}{$chrom}[0]=$pos1;
+#	$cRNA_hash{$x}{$chrom}[1]=$pos2;
+        foreach my $cRNAIDs (keys %{$cRNA_hash{$chrom}}) {
+                if (exists $cRNA_hash{$chrom}{$cRNAIDs}[0]) {
+                        if (abs($cRNA_hash{$chrom}{$cRNAIDs}[0] - $pos1) <= $distancemax && abs($cRNA_hash{$chrom}{$cRNAIDs}[1] - $pos2) <= $distancemax ) {
+                                next BIGLOOP;
+                        }
+                }
+        }
+	$cRNA_hash{$chrom}{$x}[0]=$pos1;
+        $cRNA_hash{$chrom}{$x}[1]=$pos2;
+
 	print "$x\n"; 
 }
 
