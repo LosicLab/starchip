@@ -17,9 +17,15 @@ Within the directory you\'d like the software installed:
 
 ``git clone https://github.com/LosicLab/starchip.git``
 
-Please ensure that the files in starchip/bin/ have execute permission:
+Please ensure that the files in starchip/ and starchip/scripts/*/ have execute permission:
 
-``chmod +x starchip/bin/*``
+::
+
+	chmod +x starchip/*sh
+	chmod +x starchip/*pl
+	chmod +x starchip/scripts/*/*sh
+	chmod +x starchip/scripts/*/*pl
+
 
 That\'s it!  
 There are a number of software dependencies.  These should be callable without a full path (ie they should be included in your $PATH) :
@@ -28,7 +34,7 @@ There are a number of software dependencies.  These should be callable without a
 - Bedtools >= 2.24.0 (https://github.com/arq5x/bedtools2)
 - Mafft (http://mafft.cbrc.jp/alignment/software/)
 - R (https://www.r-project.org/ )
-- R packages limma, edgeR (https://bioconductor.org/packages/release/bioc/html/limma.html) 
+- R packages gplot, limma, edgeR (https://bioconductor.org/packages/release/bioc/html/limma.html) 
 - STAR (https://github.com/alexdobin/STAR) 
 
 Setup

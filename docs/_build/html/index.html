@@ -56,8 +56,13 @@
 <p>starchip was written to work in a *nix shell-like environment, using Bash, Perl, and R extensively.  To use this on Windows, a shell emulator such as Cygwin is likely necessary.  It will probably work in Mac OS, but this is untested and likely there will be formatting issues.  At this point we will assume you are in a *nix shell:
 Within the directory you&#8217;d like the software installed:</p>
 <p><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/LosicLab/starchip.git</span></code></p>
-<p>Please ensure that the files in starchip/bin/ have execute permission:</p>
-<p><code class="docutils literal"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">starchip/bin/*</span></code></p>
+<p>Please ensure that the files in starchip/ and starchip/scripts/<a href="#id1"><span class="problematic" id="id2">*</span></a>/ have execute permission:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/*</span><span class="n">sh</span>
+<span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/*</span><span class="n">pl</span>
+<span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/</span><span class="n">scripts</span><span class="o">/*/*</span><span class="n">sh</span>
+<span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/</span><span class="n">scripts</span><span class="o">/*/*</span><span class="n">pl</span>
+</pre></div>
+</div>
 <p>That&#8217;s it!
 There are a number of software dependencies.  These should be callable without a full path (ie they should be included in your $PATH) :</p>
 <ul class="simple">
@@ -65,7 +70,7 @@ There are a number of software dependencies.  These should be callable without a
 <li>Bedtools &gt;= 2.24.0 (<a class="reference external" href="https://github.com/arq5x/bedtools2">https://github.com/arq5x/bedtools2</a>)</li>
 <li>Mafft (<a class="reference external" href="http://mafft.cbrc.jp/alignment/software/">http://mafft.cbrc.jp/alignment/software/</a>)</li>
 <li>R (<a class="reference external" href="https://www.r-project.org/">https://www.r-project.org/</a> )</li>
-<li>R packages limma, edgeR (<a class="reference external" href="https://bioconductor.org/packages/release/bioc/html/limma.html">https://bioconductor.org/packages/release/bioc/html/limma.html</a>)</li>
+<li>R packages gplot, limma, edgeR (<a class="reference external" href="https://bioconductor.org/packages/release/bioc/html/limma.html">https://bioconductor.org/packages/release/bioc/html/limma.html</a>)</li>
 <li>STAR (<a class="reference external" href="https://github.com/alexdobin/STAR">https://github.com/alexdobin/STAR</a>)</li>
 </ul>
 </div>

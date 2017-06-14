@@ -81,7 +81,7 @@ Run Modes:
 
 Software Dependencies:
 	
-	R with the following packages: limma, edgeR
+	R with the following packages: limma, edgeR, gplots
 	bedtools (>=2.24.0)
 	star
 
