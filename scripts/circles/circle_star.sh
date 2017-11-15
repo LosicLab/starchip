@@ -55,7 +55,7 @@ if [ ${runstar} = 'true' ] ; then
 	currentStep=$((currentStep + 1))
 	rm -f Step${currentStep}.sh
 	echo '#!/bin/bash'  > Step${currentStep}.sh
-	echo "Performing inital STAR alignment" >> Step${currentStep}.sh
+	echo "#Performing inital STAR alignment" >> Step${currentStep}.sh
 	cat ${fastqfiles} |while read readfiles ; do 
 		ID=`echo $readfiles |sed 's/\s.*//' |sed 's/.*\///' `; 
 	        mkdir -p STARout/${ID}
