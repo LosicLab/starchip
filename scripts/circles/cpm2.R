@@ -8,8 +8,9 @@ library(methods)
 
 ccounts <- read.table( args[1], row.names = 1, header=T)
 ann_c <- read.table( args[4], row.names=1 , header=T)
+samples<-ncol(ccounts)
+if (samples > 1) {
 #dim(ccounts)
-
 pdf( paste(gsub("countmatrix", "", args[1]), args[2], "cpm_", args[3], "samples", "_variance_PCA.pdf", sep="") )
 #voom with diagonal design matrix (all replicates of one pretend condition, i.e. variance model including all samples)
 dge_cRNA <- DGEList( counts = ccounts, genes = ann_c)
@@ -54,4 +55,5 @@ heatmap.2(pmin(v_cRNA$E[idx,], limit), labRow = cfeature[idx], Rowv = T, scale =
 
 dev.off()
 
+}
 

@@ -42,7 +42,7 @@ Setup
 
 STAR
 ----- 
-starchip is written to be an extension of the STAR read aligner.   It does not itself run STAR on your samples.  Therefore to run starchip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin 15 --chimJunctionOverhangMin 15.  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
+starchip is written to be an extension of the STAR read aligner.  It is optional for STARChip to run STAR on your samples. In most instances to run STARChip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin 15 --chimJunctionOverhangMin 15.  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
 
 ``STAR --genomeDir /path/to/starIndex/ --readFilesIn file1_1.fastq.gz file1_2.fastq.gz --runThreadN 11 --outReadsUnmapped Fastx --quantMode GeneCounts 
 --chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand zcat --outSAMtype BAM Unsorted``
@@ -51,7 +51,7 @@ Reference/BED Files
 -------------------
 STARChip makes use of gtf files for annotating fusions and cRNA with gene names.  However, we require them in ucsc bed file format.  We also require a bedtools .genome file to aid in sorting.  These can automatically be generating from your gtf file using the command\:
 
-``/starchip/scripts/setup/gtf2bed.sh /path/to/your/file.gtf /path/to/your/genome.fasta /path/to/desired/output/dir/``
+``/starchip/setup.sh /path/to/your/file.gtf /path/to/your/genome.fasta /path/to/desired/output/dir/``
 
 GTF and FASTA files can be downloaded from Ensembl, UCSC, gencode, refseq, and other online sources.  It is recommended to use the same GTF and FASTA that your STAR index was built with.
 
@@ -103,7 +103,7 @@ STARChip-Fusions
 
 starchip-fusions is run on individual samples.  
 
-``/path/to/starchip/bin/starchip-fusions.pl output_seed Chimeric.out.junction Paramters.txt``
+``/path/to/starchip/starchip-fusions.pl output_seed Chimeric.out.junction Paramters.txt``
 
 output_seed is the unique preface to your output file; e.g. sample1, or output/sample1
 Chimeric.out.junction is the full path to your STAR output file Chimeric.out.junction. 
@@ -113,7 +113,7 @@ STARChip-Circles
 -----------------
 starchip-circles is run on groups of samples.
 
-``/path/to/starchip/bin/starchip-circles.pl STARdirs.txt Parameters.txt``
+``/path/to/starchip/starchip-circles.pl STARdirs.txt Parameters.txt``
 
 STARdirs.txt is a text file with a full path to one STAR output directory per line
 Parameters.txt is your parameters file for this job.  

@@ -25,5 +25,5 @@ output_all2<-cbind(output_all, gcounts_ratio_adjusted)
 
 #write output
 write.table(countMatrix, file=args[2], sep="\t", quote=F)
-write.table(gcounts, file=paste(args[2], "strandImbalanceReduced", sep="."), sep="\t", quote=F)
+write.table(gcounts, file=paste(args[2], "NotStrandImbalanceReduced", sep="."), sep="\t", quote=F)
 write.table(output_all2, file=args[3], sep="\t", quote=F)

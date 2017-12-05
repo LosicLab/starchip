@@ -17,7 +17,7 @@ my $gtffile = $ARGV[0] . ".gtf" ;
 open GTF, ">$gtffile" or die $!;
 print ">cRNA_custom\n";
 while (my $y = <CIRCLES>) {
-	next if ( $y ~~ /ID/);
+	next if ( $y eq 'ID');
 	chomp $y; 
 	my @splitted = split (/[:-]/, $y);
 	##print "$splitted[0]\t$splitted[1]\t$splitted[2]\n";

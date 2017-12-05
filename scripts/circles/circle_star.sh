@@ -78,7 +78,7 @@ done
 echo "Filtering out chimeric reads that appear circular"
 cat $stardirslist | sed 's/$/\//' |sed 's/\/\/$/\//' | xargs --max-procs=${cpus} -I {} ${DIR}/chimera-score.pl {} $starprefix $IDstepsback ${DIR}/filter_circsv3.pl
 wait  #wait for all backsplices files to finish.
-echo "Filtering circular reads based on assigned thesholds of ${cutofflist[@]} reads in ${minSubjLimit} individuals"
+echo "Filtering circular reads based on assigned thresholds of ${cutofflist[@]} reads in ${minSubjLimit} individuals"
 ##Generate a cutoff file with all cRNA above the reads cutoff
 for cutoff in "${cutofflist[@]}" ; do
         ##now toss all candidates that pass a read support cutoff into a file named for the cutoff# (ie 10,20,50)

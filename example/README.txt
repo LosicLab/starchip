@@ -14,7 +14,7 @@ wget http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
 gunzip gencode.v26.primary_assembly.annotation.gtf.gz
 gunzip GRCh38.primary_assembly.genome.fa.gz
 # Fusions only:
-gunzip http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
+gunzip rmsk.txt.gz
 
 
 # Set up the references 
