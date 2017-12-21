@@ -6,16 +6,22 @@ library(gplots)
 library(methods)
 #library(rgl)
 
+readscutoff <- 1000 # minimum number of circRNA reads.  Less and the sample will be eliminated.  
 ccounts <- read.table( args[1], row.names = 1, header=T)
 ann_c <- read.table( args[4], row.names=1 , header=T)
 samples<-ncol(ccounts)
-if (samples > 1) {
-#dim(ccounts)
-pdf( paste(gsub("countmatrix", "", args[1]), args[2], "cpm_", args[3], "samples", "_variance_PCA.pdf", sep="") )
 #voom with diagonal design matrix (all replicates of one pretend condition, i.e. variance model including all samples)
 dge_cRNA <- DGEList( counts = ccounts, genes = ann_c)
 	#keep only samples with > 1000 backsplice (circular) reads
-dge_cRNA <- dge_cRNA[ , colSums(dge_cRNA$counts) > 1000, keep.lib.sizes = F]
+badsamples<-colnames(dge_cRNA$counts)[which(colSums(dge_cRNA$counts) < readscutoff)]
+if (length(badsamples) > 0) {
+	print(paste("The following samples were eliminated from PCA/heatmap analysis because they have less than", readscutoff, "circRNA reads", sep=" "))
+	print(badsamples)
+}
+if (samples - length(badsamples) > 1) {
+#dim(ccounts)
+pdf( paste(gsub("countmatrix", "", args[1]), args[2], "cpm_", args[3], "samples", "_variance_PCA.pdf", sep="") )
+dge_cRNA <- dge_cRNA[ , colSums(dge_cRNA$counts) > readscutoff, keep.lib.sizes = F]
 dge_cRNA <- calcNormFactors(dge_cRNA)
 v_cRNA <- voom(dge_cRNA)
 

@@ -185,6 +185,7 @@ if [ ${4} == 'true' ] ; then
 	for f in ${cutofflist[@]} ; do 
 		${DIR}/candidate_stats.pl rawdata/circs\${f}.${minSubjLimit}.investigate \${f}.spliced &
 	done
+	wait
 	##generate sj max matrix
 	echo "creating matrix of maximum linear splices"
 	for cutoff in ${cutofflist[@]} ; do
