@@ -5,7 +5,7 @@ gtfbed=$2
 genomefile=`echo $gtfbed |sed 's/.bed$/.genome/'`
 
 #cRNA format 1-12345-6789-12 or 1:2345-6789
-tail -n +2 $1 | cut -f1 |sed 's/[-:]/\t/g' |awk '{ print $1,$2,$2,$1":"$2"-"$3":p1","\n"$1,$3,$3,$1":"$2"-"$3":p2"}' OFS="\t"| sort -k1,1 -k2,2n -k3,3n  >${1}.p1.bed
+tail -n +2 $1 | cut -f1 |sed 's/[-:]/\t/g' |awk '{ print $1,$2,$2,$1":"$2"-"$3":p1\n"$1,$3,$3,$1":"$2"-"$3":p2"}' OFS="\t"| sort -k1,1 -k2,2n -k3,3n  >${1}.p1.bed
 
 bedtools closest -g $genomefile -nonamecheck -t first -D b -a ${1}.p1.bed -b $gtfbed |cut -f4,8,10,13 > ${1}.p1.anno
 sed -i -e "1i\GeneInfo\tStrand\tDistance" ${1}.p1.anno
@@ -53,3 +53,4 @@ rm ${1}.p1.bed ${1}.p1.anno ${1}.headerless
 # $ cut -f8,10 tissue_top_cRNA.annotated |sed 's/exon_number:/\t/g' | sed 's/gene_name:/\t/g' | sed 's/gene_biotype:/\t/g' |cut -f2,3,6,7 |sed 's/"//g' | sed 's/;//g' >tissue_anno_slim
 #gene/exon + distance
 # $ cut -f8,9,10,11 tissue_top_cRNA.annotated |sed 's/exon_number:/\t/g' | sed 's/gene_name:/\t/g' | sed 's/gene_biotype:/\t/g' | cut -f2,3,5,7,8,10  |sed 's/"//g' | sed 's/;//g' >tissu_anno_slim
+
