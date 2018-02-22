@@ -46,7 +46,7 @@ while (my $cRNA=<CANDIDATES>) {
 	my $genomicSize; 
 	my @cRNAarray=split(/\s+/, $cRNA); #0:chrm 1:pos 2:pos 3:#of inds
 	#create the perl style grep query 
-	my $query=$cRNAarray[0] . '\t' . $cRNAarray[1] . '\t.\t' . $cRNAarray[0] . '\t' . $cRNAarray[2] ;	
+	my $query=$cRNAarray[0] . '\t' . $cRNAarray[1] . '\t.\t' . $cRNAarray[0] . '\t' . $cRNAarray[2] ;
 	#read all files in cwd
 	for my $f (0..$#files) {
 		#if the file contains the supplied tail
