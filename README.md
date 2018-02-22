@@ -31,7 +31,8 @@ Circular RNA is not poly-A modified, so generally data from poly-T amplified RNA
 Usage:
 
 	/path/to/starchip/starchip-circles.pl star_dirs.txt parameters.txt 
-or
+
+	or
 
 	/path/to/starchip/starchip-circles.pl fastq_files.txt parameters.txt
 
