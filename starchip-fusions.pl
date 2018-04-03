@@ -17,7 +17,7 @@ use File::Basename;
 		# $ blat t=dna q=rna /path/to/database /path/to/query 
 		# the other issue is that blat/blast don't lend themselves to computational filtering easily.  taking the top hit works ok though.   
 
-if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: fusions-from-star.pl output_seed input_chimeric.out.junction params.txt \n Be sure you have samtools, bedtools, and mafft available.\n";}
+if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: starchip-fusions.pl output_seed input_chimeric.out.junction params.txt \n Be sure you have samtools, bedtools, and mafft available.\n";}
 
 my $numbcolumns=14; #need this one in case you junction.out file/input changes.  this should be a non-existant final column (ie Chimeric.junciton.out has 0-13 columns)
 #should fix this to be more robust...
