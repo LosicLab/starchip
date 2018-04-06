@@ -131,6 +131,7 @@ my @uniqreadcount = grep(/Uniquely mapped reads number/, @loglines);
 my ($trashtext, $readcount) = split(/\|/, $uniqreadcount[0]);
 $readcount =~ s/^\s+|\s+$//g; #strip whitespace
 
+
 if ( lc $Configs{"splitReads"} eq "auto" || lc $Configs{"splitReads"} eq "highsensitivity" || lc $Configs{"splitReads"} eq "highprecision" ) {
 	print "Performing Automatic Threshold Targeting For Split Reads\n";
 	#my $cutoff = $readcount / 3000000 ; 
@@ -212,7 +213,7 @@ EXITHERE: while (my $x = <JUNCTION>) {
 			$readlength=$lengthA;
 			print "Read length appears to be $readlength\n";
 		}
-		else { print "read length error, please check input\n"; 
+		else { print "read length error, please check input\nCigar String $cigarA (length $lengthA ) and $cigarB (length $lengthB ) indicate different lengths\nWill try again with the next line of your junctions file\n"; 
 			$readlength=100;
 			$linecount=-1;
 		}
