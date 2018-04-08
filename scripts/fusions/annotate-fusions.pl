@@ -169,6 +169,7 @@ my $maxAS= $readlength/2;
 my $minAS= 15; #this 15 is a changeable star parameter (--chimSegmentMin 15) 
 my $avgAStarget= ($maxAS+$minAS)/2;  #a great fusion would have this average overhang.  (~32 for 100bp reads)
 open ANNOTEMP, "<$outannotemp" or die $!;
+my $messageCounter = 0 ; 
 EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 	chomp $x; 
         my @line = split(/\s+/, $x);
@@ -180,7 +181,25 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 		my @anno1=split(/;/, $geneannot[0]);
        		my @anno2=split(/;/, $geneannot[1]);
 		my @gene1name=grep(/gene_name/, @anno1);
+		if (@gene1name) { } #see if we found a gene_name field, if not use gene_id
+		else { 
+			if ($messageCounter < 1 ) {
+				print "gene_name field not found, will use gene_id\n" ;
+				$messageCounter++; 
+			}
+			@gene1name=grep(/gene_id/, @anno1);
+			#print "$gene1name[0]\n";
+		}
         	my @gene2name=grep(/gene_name/, @anno2);
+		if (@gene2name) { }
+		else {
+                        if ($messageCounter < 1	) {
+				print "gene_name field not found, will use gene_id\n";
+				$messageCounter++; 
+			}
+			@gene2name=grep(/gene_id/, @anno2);
+			#print "$gene2name[0]\n"; 
+		}	
 		#skip same-gene 'fusions'
 		if ($gene1name[0] eq $gene2name[0]) {
 			print "Skipping same-gene 'fusion' within $gene1name[0]\n"; 
@@ -223,6 +242,8 @@ EXIT_ANNO_FILTER: while (my $x = <ANNOTEMP>) {
 		my $dist2 = $line[($cols-1)]; my $dist1 = $line[($cols-4)];
 		$gene1name[0] =~ s/gene_name:// ; $gene1name[0] =~ s/"//g ;  
 		$gene2name[0] =~ s/gene_name:// ; $gene2name[0] =~ s/"//g ;
+		$gene1name[0] =~ s/gene_id:// ; $gene1name[0] =~ s/"//g ;  
+		$gene2name[0] =~ s/gene_id:// ; $gene2name[0] =~ s/"//g ;
 		# check that the partners aren't family members:
 		my @intersection;
 		no warnings 'uninitialized'; 
