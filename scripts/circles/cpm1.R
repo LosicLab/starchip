@@ -6,7 +6,7 @@ flist <- list.files( path = args[1], pattern = "*ReadsPerGene.out.tab$", full.na
 gcounts_list <- lapply( flist, read.table, skip = 4 )
 gcounts <- as.data.frame( sapply( gcounts_list, function(x) x[,2] ) )
 # calculate the ratio of strand read support
-gcounts_ratio <- as.data.frame( sapply( gcounts_list, function(x) x[,3] ) )+0.5/( as.data.frame( sapply( gcounts_list, function(x) x[,4] ) )+0.5)
+gcounts_ratio <- (as.data.frame( sapply( gcounts_list, function(x) x[,3] ) )+0.5)/( as.data.frame( sapply( gcounts_list, function(x) x[,4] ) )+0.5)
 # turn ratios < 1 to > 1 
 gcounts_ratio_adjusted <- gcounts_ratio
 gcounts_ratio_adjusted[gcounts_ratio_adjusted < 1] <- 1/gcounts_ratio_adjusted[gcounts_ratio_adjusted < 1]
@@ -18,8 +18,8 @@ rownames(gcounts) <- gcounts_list[[1]]$V1
 rownames(gcounts_ratio_adjusted) <- gcounts_list[[1]]$V1
 
 #create output tables
-output_all<-data.frame( medianStrandRatio=apply(gcounts_ratio_adjusted, 1, median), samplesWithStrandImbalanceOver10=rowSums(gcounts_ratio_adjusted > 10)  )
-output_all$Kept<-output_all$samplesWithStrandImbalanceOver10 <= (ncol(gcounts_ratio_adjusted)/2) 
+output_all<-data.frame( medianStrandRatio=apply(gcounts_ratio_adjusted, 1, median), samplesWithStrandImbalanceOver2=rowSums(gcounts_ratio_adjusted > 2)  )
+output_all$Kept<-output_all$samplesWithStrandImbalanceOver2 <= (ncol(gcounts_ratio_adjusted)/2) 
 countMatrix<-gcounts[rownames(output_all)[which(output_all$Kept)],]
 output_all2<-cbind(output_all, gcounts_ratio_adjusted)
 
