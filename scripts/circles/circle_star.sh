@@ -82,7 +82,11 @@ echo "Filtering circular reads based on assigned thresholds of ${cutofflist[@]} 
 ##Generate a cutoff file with all cRNA above the reads cutoff
 for cutoff in "${cutofflist[@]}" ; do
         ##now toss all candidates that pass a read support cutoff into a file named for the cutoff# (ie 10,20,50)
-        ls rawdata/backsplices* | xargs --max-procs=${cpus} -I {} awk -v var="\$cutoff" -v var2="rawdata/cRNA.cutoff.\${cutoff}" '{ if (\$1 >= var) print \$0 >> var2 }' {}
+	#removing multithreading here--it was causing issues for users where the buffer fills and then flushes, giving incomplete data
+        #ls rawdata/backsplices* | xargs --max-procs=${cpus} -I {} awk -v var="\$cutoff" -v var2="rawdata/cRNA.cutoff.\${cutoff}" '{ if (\$1 >= var) print \$0 >> var2 }' {}
+	ls rawdata/backsplices* | while read line ; do 
+		awk -v var=$cutoff -v var2=rawdata/cRNA.cutoff.${cutoff} '{ if ($1 >= var) print $0 >> var2 }' $line
+	done
 done
 
 ##  create the list of interesting cRNA to investigate (those cRNA with > reads cutoff and > indiv. cutoff)

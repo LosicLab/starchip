@@ -20,7 +20,7 @@ rownames(gcounts_ratio_adjusted) <- gcounts_list[[1]]$V1
 #create output tables
 output_all<-data.frame( medianStrandRatio=apply(gcounts_ratio_adjusted, 1, median), samplesWithStrandImbalanceOver2=rowSums(gcounts_ratio_adjusted > 2)  )
 output_all$Kept<-output_all$samplesWithStrandImbalanceOver2 <= (ncol(gcounts_ratio_adjusted)/2) 
-countMatrix<-gcounts[rownames(output_all)[which(output_all$Kept)],]
+countMatrix<-gcounts[rownames(output_all)[which(output_all$Kept)],,drop=F]
 output_all2<-cbind(output_all, gcounts_ratio_adjusted)
 
 #write output
