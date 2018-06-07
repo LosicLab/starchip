@@ -42,6 +42,7 @@ Usage:
 	star_dirs.txt should have 1 full pathway to star output per line: ie 
 		/path/to/file1/star/
 		/path/to/file2/star/
+	
 	Alternatively, if you want STARChip to perform STAR realignment, fastq_files.txt should have fastq files:
 		/path/to/file1.1_R1.fastq,/path/to/file1.2_R1.fastq  /path/to/file1.1_R2.fastq,/path/to/file1.2_R2.fastq	
 		/path/to/file2.1_R1.fastq,/path/to/file2.2_R1.fastq  /path/to/file2.1_R2.fastq,/path/to/file2.2_R2.fastq	
@@ -52,13 +53,15 @@ Run Modes:
 
 	STARChip circRNA can be run on just STAR outputs, or it can work directly from fastq.  If running from fastq files, set runSTAR=true in your parameters file.  
 	If runSTAR=true, STARChip will create scripts to align (Step1.sh), discover circRNA (Step2.sh), re-align (Step3.sh), and quantify/annotate (Step4.sh).
-	If runSTAR=false, STARChip will create scrips to discover (Step1.sh), and quantify/annotate (Step2.sh) 
+	If runSTAR=false, STARChip will create scripts to discover (Step1.sh), and quantify/annotate (Step2.sh).  If runSTAR=false, you must have run STAR to 
+	create both Chimeric.out.junction and Chimeric.out.sam files.  Prior to STAR v2.6, these files are generated anytime Chimeric output is on. From STAR v2.6.0c
+	forward, you must have run STAR with chimeric output on and the flag --chimOutType Junctions SeparateSAMold .  
 
 Software Dependencies:
 	
 	R with the following packages: limma, edgeR, gplots
 	bedtools (>=2.24.0)
-	STAR
+	STAR (NOT version 2.6.0a or 2.6.0b)
 
 Files Needed:
 
@@ -95,10 +98,10 @@ Usage:
 
 Softare Dependencies:
 
-	samtools
-	bedtools (>= 2.24.0)
+	SAMtools
+	BEDtools (>= 2.24.0)
 	mafft
-	star (starchip doesn't call star, but you do need star output)
+	STAR (starchip doesn't call star, but you do need star output)
 
 Files Needed:
 	
@@ -106,6 +109,7 @@ Files Needed:
 	Fasta File and GTF File used to generate STAR index 
 	repetative elements/antibody parts regions files in .bed format (included for hg19,hg38)
 	Optional: known gene families and paralogs (included for human)
+	You must have run STAR to create both Chimeric.out.junction and Chimeric.out.sam files.  Prior to STAR v2.6, these files are generated anytime Chimeric output is on. From STAR v2.6.0c forward, you must have run STAR with chimeric output on and the flag --chimOutType Junctions SeparateSAMold .
 
 Output:
 

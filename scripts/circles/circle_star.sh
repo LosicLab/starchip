@@ -51,6 +51,31 @@ currentStep=0
 if [ ${runstar} = 'true' ] ; then
 	echo "You have indicated you would like STARChip to perform STAR alignments.  ${stardirslist} should contain a list of fastq files; 1 sample per line, multiple files separated by a comma, and paired end files separated by a space."
 	fastqfiles=${stardirslist}
+	## check the STAR version
+	echo "checking your version of STAR"
+	chimericOutputFlag=""
+	if starversion=$(STAR --version) ; then 
+		echo "you are using $starversion"
+		echo $starversion | grep -q 'STAR_2.6.0a\|STAR_2.6.0b'
+		greprc=$?
+		if [[ $greprc -eq 0 ]] ; then
+			echo "STAR versions 2.6.0a and 2.6.0b are incompatible with STARChip, please install a different version."
+			exit
+		fi
+		echo $starversion | grep -q 'STAR_2.0\|STAR_2.1\|STAR_2.2\|STAR_2.3\|STAR_2.4\|STAR_2.5'
+		greprc=$?
+		if [[ $greprc -eq 0 ]] ; then
+			##echo "using old STAR mode"
+			# we've got old STAR
+			:
+		else
+			###echo "using new STAR mode"
+			chimericOutputFlag="--chimOutType Junctions SeparateSAMold"
+		fi
+	else
+		echo "cannot check your version of STAR, please add STAR to your path"
+	fi
+	# Create STAR alignment Commands
 	rm -f rawdata/stardirs.txt
 	currentStep=$((currentStep + 1))
 	rm -f Step${currentStep}.sh
@@ -61,7 +86,7 @@ if [ ${runstar} = 'true' ] ; then
 	        mkdir -p STARout/${ID}
 		    echo "STAR --genomeDir ${stargenome} --readFilesIn ${readfiles} --runThreadN ${cpus} --outReadsUnmapped Fastx \
 		        --chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand ${starReadCommand} \
-			--outSAMtype BAM Unsorted --twopassMode Basic --outFileNamePrefix ./STARout/${ID}/ " >> Step${currentStep}.sh
+			--outSAMtype BAM Unsorted --twopassMode Basic --outFileNamePrefix ./STARout/${ID}/ ${chimericOutputFlag}" >> Step${currentStep}.sh
 		echo "./STARout/${ID}/" >> rawdata/stardirs.txt
 	done
 	stardirslist=rawdata/stardirs.txt

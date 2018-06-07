@@ -13,7 +13,14 @@ if (scalar(@ARGV) != 2 ) { die "Wrong number of inputs. Usage: starchip-circles.
 my $script_dir=abs_path($0);
 $script_dir =~ s/starchip-circles.pl/scripts\/circles/;
 
-
+#Output the Verion
+my $CHANGES=abs_path($0) ;
+$CHANGES =~ s/starchip-circles.pl/CHANGES.md/; 
+open CHANGESFILE, "<$CHANGES" or die $! ; 
+my $version = <CHANGESFILE> ; 
+close CHANGESFILE ;  
+print "STARChip $version";
+ 
 ##Read in User Parameters (taken from Perl Cookbook "8.16. Reading Configuration Files")
 my %Configs = ();
 my $configfile = $ARGV[1];
@@ -63,10 +70,11 @@ unless (-e $Configs{refFasta}) { #unless the reference fasta file exists
 	die "Could not find the reference fasta at $Configs{refFasta}, please provide one in your configs file and rerun\n"; 
 }
 if ($Configs{starprefix} eq "" ) { 
-	$Configs{starprefix}="NoPrefix123456789"
+	$Configs{starprefix}="NoPrefix123456789";
 }
 if (lc $Configs{runSTAR} eq "true") { 
 	$Configs{runSTAR}="true"; 
+	$Configs{starprefix}="NoPrefix123456789";
 	if (-d $Configs{STARgenome} ) { 
 		#that's good 
 	}

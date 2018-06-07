@@ -19,6 +19,14 @@ use File::Basename;
 
 if (scalar(@ARGV) != 3 ) { die "Wrong number of inputs. Usage: starchip-fusions.pl output_seed input_chimeric.out.junction params.txt \n Be sure you have samtools, bedtools, and mafft available.\n";}
 
+#Output the Verion
+my $CHANGES=abs_path($0) ;
+$CHANGES =~ s/starchip-fusions.pl/CHANGES.md/;
+open CHANGESFILE, "<$CHANGES" or die $! ;
+my $version = <CHANGESFILE> ;
+close CHANGESFILE ;
+print "STARChip $version";
+
 my $numbcolumns=14; #need this one in case you junction.out file/input changes.  this should be a non-existant final column (ie Chimeric.junciton.out has 0-13 columns)
 #should fix this to be more robust...
 

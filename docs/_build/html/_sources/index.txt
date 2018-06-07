@@ -6,13 +6,15 @@ STARChip Manual
 | Icahn Institute of Genomics and Multiscale Biology
 | Mt. Sinai School of Medicine
 
+| Manuscript published `here. <https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/bty091/4883488?guestAccessKey=9f40eec1-96cc-4b0f-b0b5-bb1eaa2e20eb/>`_
+
 Introduction
 ============
 This software was written in order to fulfill a perceived lack of tools that can identify, from RNA-Seq data, high confidence fusions and circular RNA.  There are many other tools to discover fusions in RNA, and a handful of other tools to discover circular RNA.  We have endeavored to create the lowest possible false-positive rate for fusion detection, while creating helpful and convenient output files.  We’ve also emphasized the need for short running times in order to make this software useful for enormous data sets.  
 
 Installation
 ============
-starchip was written to work in a \*nix shell-like environment, using Bash, Perl, and R extensively.  To use this on Windows, a shell emulator such as Cygwin is likely necessary.  It will probably work in Mac OS, but this is untested and likely there will be formatting issues.  At this point we will assume you are in a \*nix shell: 
+STARChip was written to work in a \*nix shell-like environment, using Bash, Perl, and R extensively.  To use this on Windows, a shell emulator such as Cygwin is likely necessary.  It will probably work in Mac OS, but this is untested and likely there will be formatting issues.  At this point we will assume you are in a \*nix shell: 
 Within the directory you\'d like the software installed: 
 
 ``git clone https://github.com/LosicLab/starchip.git``
@@ -30,28 +32,32 @@ Please ensure that the files in starchip/ and starchip/scripts/*/ have execute p
 That\'s it!  
 There are a number of software dependencies.  These should be callable without a full path (ie they should be included in your $PATH) :
 
-- Samtools (http://www.htslib.org/)
 - Bedtools >= 2.24.0 (https://github.com/arq5x/bedtools2)
-- Mafft (http://mafft.cbrc.jp/alignment/software/)
 - R (https://www.r-project.org/ )
 - R packages gplot, limma, edgeR (https://bioconductor.org/packages/release/bioc/html/limma.html) 
-- STAR (https://github.com/alexdobin/STAR) 
+- STAR (https://github.com/alexdobin/STAR).  Not v2.6.0a or 2.6.0b.  Any other recent release should work.  
+Fusions Only:
+
+- Samtools (http://www.htslib.org/)
+- Mafft (http://mafft.cbrc.jp/alignment/software/)
 
 Setup
 =====
 
 STAR
 ----- 
-starchip is written to be an extension of the STAR read aligner.   It does not itself run STAR on your samples.  Therefore to run starchip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin 15 --chimJunctionOverhangMin 15.  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
+STARChip is written to be an extension of the STAR read aligner.  It is optional for STARChip to run STAR on your samples. In most instances to run STARChip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin X --chimJunctionOverhangMin X (where X is an integer).  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
 
 ``STAR --genomeDir /path/to/starIndex/ --readFilesIn file1_1.fastq.gz file1_2.fastq.gz --runThreadN 11 --outReadsUnmapped Fastx --quantMode GeneCounts 
---chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand zcat --outSAMtype BAM Unsorted``
+--chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand zcat --outSAMtype BAM Unsorted --chimOutType Junctions SeparateSAMold``
+
+Note that the final flag, "--chimOutType Junctions SeparateSAMold" should be omitted for versions of STAR v2.5 or earlier. 
 
 Reference/BED Files
 -------------------
-STARChip makes use of gtf files for annotating fusions and cRNA with gene names.  However, we require them in ucsc bed file format.  We also require a bedtools .genome file to aid in sorting.  These can automatically be generating from your gtf file using the command\:
+STARChip makes use of gtf files for annotating fusions and circRNA with gene names.  However, we require them in ucsc bed file format.  We also require a bedtools .genome file to aid in sorting.  These can automatically be generated from your gtf file using the command\:
 
-``/starchip/scripts/setup/gtf2bed.sh /path/to/your/file.gtf /path/to/your/genome.fasta /path/to/desired/output/dir/``
+``/starchip/setup.sh /path/to/your/file.gtf /path/to/your/genome.fasta /path/to/desired/output/dir/``
 
 GTF and FASTA files can be downloaded from Ensembl, UCSC, gencode, refseq, and other online sources.  It is recommended to use the same GTF and FASTA that your STAR index was built with.
 
@@ -87,13 +93,13 @@ Finally, starchip-fusions uses known gene families and known/common false-positi
 5)	Click Results at the top.
 6)	Export the file.  It should have two columns, Family ID and Gene ID.  
 
-Known false positives are stored within data/pseudogenes.txt  Feel free to put add any additional lines that result from your data to this file in the format
+Known false positives are stored within data/pseudogenes.txt. In practice, we've found that pseudogenes and tissue specific highly expressed genes are commonly "fused" via PCR template switching errors.  Feel free to put add any additional lines that result from your data to this file in the format
 
 ``Gene1Name	Gene2Name``
 
 Parameter Files
 ---------------
-starchip-fusions and starchip-circles rely on parameter files to supply all the information to complete a successful run.  Examples are given in the paramfiles directory, however **you need to customize a parameter file for each run**.  Not doing so is akin to buying shoes without specifying what style or size of shoe you desire.  All required and optional parameters are explained here.  We recommend you copy an example parameter file to your working directory and edit it there.   All parameter values are explained at the end of the manual.  
+starchip-fusions and starchip-circles rely on parameter files to supply all the information to complete a successful run.  Examples are given in the paramfiles directory, however **you need to customize a parameter file for each run**.  All required and optional parameters are explained here.  We recommend you copy an example parameter file to your working directory and edit it there.   All parameter values are explained at the end of the manual.  
 
 Running STARChip
 =================
@@ -103,7 +109,7 @@ STARChip-Fusions
 
 starchip-fusions is run on individual samples.  
 
-``/path/to/starchip/bin/starchip-fusions.pl output_seed Chimeric.out.junction Paramters.txt``
+``/path/to/starchip/starchip-fusions.pl output_seed Chimeric.out.junction Paramters.txt``
 
 output_seed is the unique preface to your output file; e.g. sample1, or output/sample1
 Chimeric.out.junction is the full path to your STAR output file Chimeric.out.junction. 
@@ -113,7 +119,7 @@ STARChip-Circles
 -----------------
 starchip-circles is run on groups of samples.
 
-``/path/to/starchip/bin/starchip-circles.pl STARdirs.txt Parameters.txt``
+``/path/to/starchip/starchip-circles.pl STARdirs.txt Parameters.txt``
 
 STARdirs.txt is a text file with a full path to one STAR output directory per line
 Parameters.txt is your parameters file for this job.  
@@ -154,12 +160,12 @@ CircRNA Parameter Files
 Parameter
 ================	================================================================================
 readsCutoff		Integer. Minimum number of reads crossing the circular RNA backsplice required.  To check multiple cutoffs (eg to examine 5, 10, and 15 reads, use the following format (within quotes)  "( 5 10 15 )" )
-minSubjectLimit		Integer. Minimum number of individuals with \'readsCutoff\' reads required to carry forward a cRNA for analysis. 
+minSubjectLimit		Integer. Minimum number of individuals with \'readsCutoff\' reads required to carry forward a circRNA for analysis. 
 cpus			Integer.  Number of threads to use.  If a non-numeric value is given, the command nproc will be used to determine the number of threads.
-do_Splice		true/false.  Should the splices within the cRNA be detected and reported?  Linear splices are searched within each cRNA in each individual.  Any linear splice with >= 60% of the read count of the cRNA is considered a splice within the cRNA.  Two files are then created, \*.consensus with most common splice pattern, and \*.allvariants with all reported splice patterns.  
-cpmCutoff		Float. Reads counts are loaded into R and log2(CountsPerMillion) is calculated using the limma package.  With cpmCutoff > 0, cRNA with log2(CPM) below this value will be filtered from this analysis.
-subjectCPMcutoff	Integer.  See above.  This value is the lower limit for number of individuals required to have the cRNA expressed at a value higher than cpmCutoff. 
-annotate		true/false.  Should cRNA be given gene annotations?  Uses refbed.  
+do_Splice		true/false.  Should the splices within the circRNA be detected and reported?  Linear splices are searched within each circRNA in each individual.  Any linear splice with >= 60% of the read count of the circRNA is considered a splice within the circRNA.  Two files are then created, \*.consensus with most common splice pattern, and \*.allvariants with all reported splice patterns.  
+cpmCutoff		Float. Reads counts are loaded into R and log2(CountsPerMillion) is calculated using the limma package.  With cpmCutoff > 0, circRNA with log2(CPM) below this value will be filtered from this analysis.
+subjectCPMcutoff	Integer.  See above.  This value is the lower limit for number of individuals required to have the circRNA expressed at a value higher than cpmCutoff. 
+annotate		true/false.  Should circRNA be given gene annotations?  Uses refbed.  
 refbed			String.  The bed file generated earlier with gtf2bed.sh.	
 refFasta	   	String.  A genome fasta file (preferably the one used to build the STAR index).  If not the same it MUST be the same genome build and it must have the same chromosome identifiers.  
 starprefix		String.  If you used the star parameter --outFileNamePrefix, give that value here.  E.g. if your star output has a file named \"mydata_Chimeric.out.junction\"  then put \"mydata\_\" for starprefix.

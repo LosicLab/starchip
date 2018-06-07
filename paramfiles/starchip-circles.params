@@ -12,12 +12,14 @@ refbed = /path/to/reference/bed/hg38.bed  #use setup.sh to create this from a gt
 refFasta = /path/to/reference/fasta/hg38.fa
 
 #STAR Parameters
-## Do you use a prefix for your STAR output?
+## Do you use a prefix for your STAR output? Most users should leave this blank. 
 starprefix =  
 ## Are you starting from fastq and need to run STAR alignment? 
 runSTAR = True
 STARgenome = /path/to/STAR/genomeIndex/  #not necassary if runSTAR != True
 STARreadcommand = zcat   #cat for fastq, zcat for fastq.gz etc. not necassary	if runSTAR != True
+
+#Only used if runSTAR = false, needed to uniquely identify your cohort samples.  
 IDstepsback = 1 ## this is the position from the right of your path of the name of your files.  
 		##for example: /path/to/sample1/star/2.4.2/output/Chimeric.out.junction 
 		##sample1 is 4 steps back.

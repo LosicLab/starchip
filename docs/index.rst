@@ -35,7 +35,7 @@ There are a number of software dependencies.  These should be callable without a
 - Bedtools >= 2.24.0 (https://github.com/arq5x/bedtools2)
 - R (https://www.r-project.org/ )
 - R packages gplot, limma, edgeR (https://bioconductor.org/packages/release/bioc/html/limma.html) 
-- STAR (https://github.com/alexdobin/STAR) 
+- STAR (https://github.com/alexdobin/STAR).  Not v2.6.0a or 2.6.0b.  Any other recent release should work.  
 Fusions Only:
 
 - Samtools (http://www.htslib.org/)
@@ -49,7 +49,9 @@ STAR
 STARChip is written to be an extension of the STAR read aligner.  It is optional for STARChip to run STAR on your samples. In most instances to run STARChip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is **absolutely critical** however, that you follow the STAR manual\'s instructions and **build a genome using all chromosomes plus unplaced contigs**.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: --chimSegmentMin X --chimJunctionOverhangMin X (where X is an integer).  Your project will have it\'s own requirements, but a good starting point for your star alignments might look like: 
 
 ``STAR --genomeDir /path/to/starIndex/ --readFilesIn file1_1.fastq.gz file1_2.fastq.gz --runThreadN 11 --outReadsUnmapped Fastx --quantMode GeneCounts 
---chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand zcat --outSAMtype BAM Unsorted``
+--chimSegmentMin 15 --chimJunctionOverhangMin 15 --outSAMstrandField intronMotif --readFilesCommand zcat --outSAMtype BAM Unsorted --chimOutType Junctions SeparateSAMold``
+
+Note that the final flag, "--chimOutType Junctions SeparateSAMold" should be omitted for versions of STAR v2.5 or earlier. 
 
 Reference/BED Files
 -------------------

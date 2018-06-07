@@ -1,27 +1,36 @@
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>STARChip Manual &#8212; STARChip Manual 1.1 documentation</title>
+    
+    <title>STARChip Manual &mdash; STARChip Manual 1.1 documentation</title>
+    
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="STARChip Manual 1.1 documentation" href="#" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head><body>
+  </head>
+  <body role="document">
   
 
     <div class="document">
@@ -48,22 +57,22 @@
 <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <p>STARChip was written to work in a *nix shell-like environment, using Bash, Perl, and R extensively.  To use this on Windows, a shell emulator such as Cygwin is likely necessary.  It will probably work in Mac OS, but this is untested and likely there will be formatting issues.  At this point we will assume you are in a *nix shell:
-Within the directory you’d like the software installed:</p>
-<p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/LosicLab/starchip.git</span></code></p>
+Within the directory you&#8217;d like the software installed:</p>
+<p><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/LosicLab/starchip.git</span></code></p>
 <p>Please ensure that the files in starchip/ and starchip/scripts/<a href="#id1"><span class="problematic" id="id2">*</span></a>/ have execute permission:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/*</span><span class="n">sh</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/*</span><span class="n">sh</span>
 <span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/*</span><span class="n">pl</span>
 <span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/</span><span class="n">scripts</span><span class="o">/*/*</span><span class="n">sh</span>
 <span class="n">chmod</span> <span class="o">+</span><span class="n">x</span> <span class="n">starchip</span><span class="o">/</span><span class="n">scripts</span><span class="o">/*/*</span><span class="n">pl</span>
 </pre></div>
 </div>
-<p>That’s it!
+<p>That&#8217;s it!
 There are a number of software dependencies.  These should be callable without a full path (ie they should be included in your $PATH) :</p>
 <ul class="simple">
 <li>Bedtools &gt;= 2.24.0 (<a class="reference external" href="https://github.com/arq5x/bedtools2">https://github.com/arq5x/bedtools2</a>)</li>
 <li>R (<a class="reference external" href="https://www.r-project.org/">https://www.r-project.org/</a> )</li>
 <li>R packages gplot, limma, edgeR (<a class="reference external" href="https://bioconductor.org/packages/release/bioc/html/limma.html">https://bioconductor.org/packages/release/bioc/html/limma.html</a>)</li>
-<li>STAR (<a class="reference external" href="https://github.com/alexdobin/STAR">https://github.com/alexdobin/STAR</a>)</li>
+<li>STAR (<a class="reference external" href="https://github.com/alexdobin/STAR">https://github.com/alexdobin/STAR</a>).  Not v2.6.0a or 2.6.0b.  Any other recent release should work.</li>
 </ul>
 <p>Fusions Only:</p>
 <ul class="simple">
@@ -75,19 +84,20 @@ There are a number of software dependencies.  These should be callable without a
 <h1>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="star">
 <h2>STAR<a class="headerlink" href="#star" title="Permalink to this headline">¶</a></h2>
-<p>STARChip is written to be an extension of the STAR read aligner.  It is optional for STARChip to run STAR on your samples. In most instances to run STARChip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is <strong>absolutely critical</strong> however, that you follow the STAR manual’s instructions and <strong>build a genome using all chromosomes plus unplaced contigs</strong>.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: –chimSegmentMin X –chimJunctionOverhangMin X (where X is an integer).  Your project will have it’s own requirements, but a good starting point for your star alignments might look like:</p>
-<p><code class="docutils literal notranslate"><span class="pre">STAR</span> <span class="pre">--genomeDir</span> <span class="pre">/path/to/starIndex/</span> <span class="pre">--readFilesIn</span> <span class="pre">file1_1.fastq.gz</span> <span class="pre">file1_2.fastq.gz</span> <span class="pre">--runThreadN</span> <span class="pre">11</span> <span class="pre">--outReadsUnmapped</span> <span class="pre">Fastx</span> <span class="pre">--quantMode</span> <span class="pre">GeneCounts</span>
-<span class="pre">--chimSegmentMin</span> <span class="pre">15</span> <span class="pre">--chimJunctionOverhangMin</span> <span class="pre">15</span> <span class="pre">--outSAMstrandField</span> <span class="pre">intronMotif</span> <span class="pre">--readFilesCommand</span> <span class="pre">zcat</span> <span class="pre">--outSAMtype</span> <span class="pre">BAM</span> <span class="pre">Unsorted</span></code></p>
+<p>STARChip is written to be an extension of the STAR read aligner.  It is optional for STARChip to run STAR on your samples. In most instances to run STARChip you must first run star on each of your samples.  See the STAR documentation for installation, as well as building or downloading a STAR genome index.  It is <strong>absolutely critical</strong> however, that you follow the STAR manual&#8217;s instructions and <strong>build a genome using all chromosomes plus unplaced contigs</strong>.  Not doing so will strongly inflate your false positives rate, because reads that map perfectly to an unplaced contig will instead find the next best alignment, often a chimeric alignment.  Run STAR with the following parameters required for chimeric output: &#8211;chimSegmentMin X &#8211;chimJunctionOverhangMin X (where X is an integer).  Your project will have it&#8217;s own requirements, but a good starting point for your star alignments might look like:</p>
+<p><code class="docutils literal"><span class="pre">STAR</span> <span class="pre">--genomeDir</span> <span class="pre">/path/to/starIndex/</span> <span class="pre">--readFilesIn</span> <span class="pre">file1_1.fastq.gz</span> <span class="pre">file1_2.fastq.gz</span> <span class="pre">--runThreadN</span> <span class="pre">11</span> <span class="pre">--outReadsUnmapped</span> <span class="pre">Fastx</span> <span class="pre">--quantMode</span> <span class="pre">GeneCounts</span>
+<span class="pre">--chimSegmentMin</span> <span class="pre">15</span> <span class="pre">--chimJunctionOverhangMin</span> <span class="pre">15</span> <span class="pre">--outSAMstrandField</span> <span class="pre">intronMotif</span> <span class="pre">--readFilesCommand</span> <span class="pre">zcat</span> <span class="pre">--outSAMtype</span> <span class="pre">BAM</span> <span class="pre">Unsorted</span> <span class="pre">--chimOutType</span> <span class="pre">Junctions</span> <span class="pre">SeparateSAMold</span></code></p>
+<p>Note that the final flag, &#8220;&#8211;chimOutType Junctions SeparateSAMold&#8221; should be omitted for versions of STAR v2.5 or earlier.</p>
 </div>
 <div class="section" id="reference-bed-files">
 <h2>Reference/BED Files<a class="headerlink" href="#reference-bed-files" title="Permalink to this headline">¶</a></h2>
 <p>STARChip makes use of gtf files for annotating fusions and circRNA with gene names.  However, we require them in ucsc bed file format.  We also require a bedtools .genome file to aid in sorting.  These can automatically be generated from your gtf file using the command:</p>
-<p><code class="docutils literal notranslate"><span class="pre">/starchip/setup.sh</span> <span class="pre">/path/to/your/file.gtf</span> <span class="pre">/path/to/your/genome.fasta</span> <span class="pre">/path/to/desired/output/dir/</span></code></p>
+<p><code class="docutils literal"><span class="pre">/starchip/setup.sh</span> <span class="pre">/path/to/your/file.gtf</span> <span class="pre">/path/to/your/genome.fasta</span> <span class="pre">/path/to/desired/output/dir/</span></code></p>
 <p>GTF and FASTA files can be downloaded from Ensembl, UCSC, gencode, refseq, and other online sources.  It is recommended to use the same GTF and FASTA that your STAR index was built with.</p>
 <p>starchip-fusions filters using the location of known repeats in bed format as well.  This file will be large (~300MB for human), and can be downloaded from the UCSC table browser:</p>
 <ol class="arabic simple">
 <li>Go to <a class="reference external" href="http://genome.ucsc.edu/cgi-bin/hgTables">http://genome.ucsc.edu/cgi-bin/hgTables</a></li>
-<li>Change ‘genome’ to your desired genome</li>
+<li>Change &#8216;genome&#8217; to your desired genome</li>
 <li>Change the following settings:<ol class="loweralpha">
 <li>group: Repeats</li>
 <li>track: RepeatMasker</li>
@@ -96,11 +106,11 @@ There are a number of software dependencies.  These should be callable without a
 <li>output file: some reasonable name.bed</li>
 </ol>
 </li>
-<li>Click ‘get output’ to download your bed file.</li>
+<li>Click &#8216;get output&#8217; to download your bed file.</li>
 <li>On your local machine sort the bed file: sort -k1,1 -k2,2n repeats.bed &gt; repeats.sorted.bed</li>
 </ol>
 <p>starchip-fusions can also make use of known antibody parts, and copy number variants.  These files come with starchip for human hg19 and hg38 in the reference directory.  For other species you can create your own in the simple format:</p>
-<p><code class="docutils literal notranslate"><span class="pre">Chromosome</span>&#160;&#160;&#160; <span class="pre">StartPosition</span>&#160;&#160; <span class="pre">EndPosition</span></code></p>
+<p><code class="docutils literal"><span class="pre">Chromosome</span>&nbsp;&nbsp;&nbsp; <span class="pre">StartPosition</span>&nbsp;&nbsp; <span class="pre">EndPosition</span></code></p>
 <p>Finally, starchip-fusions uses known gene families and known/common false-positive pairs to filter out fusions which are likely mapping errors or PCR artifacts.  Family data can be downloaded from ensembl biomart:</p>
 <ol class="arabic simple">
 <li>Go to <a class="reference external" href="http://www.ensembl.org/biomart/martview">http://www.ensembl.org/biomart/martview</a></li>
@@ -116,8 +126,8 @@ There are a number of software dependencies.  These should be callable without a
 <li>Click Results at the top.</li>
 <li>Export the file.  It should have two columns, Family ID and Gene ID.</li>
 </ol>
-<p>Known false positives are stored within data/pseudogenes.txt. In practice, we’ve found that pseudogenes and tissue specific highly expressed genes are commonly “fused” via PCR template switching errors.  Feel free to put add any additional lines that result from your data to this file in the format</p>
-<p><code class="docutils literal notranslate"><span class="pre">Gene1Name</span>&#160;&#160;&#160;&#160; <span class="pre">Gene2Name</span></code></p>
+<p>Known false positives are stored within data/pseudogenes.txt. In practice, we&#8217;ve found that pseudogenes and tissue specific highly expressed genes are commonly &#8220;fused&#8221; via PCR template switching errors.  Feel free to put add any additional lines that result from your data to this file in the format</p>
+<p><code class="docutils literal"><span class="pre">Gene1Name</span>&nbsp;&nbsp;&nbsp;&nbsp; <span class="pre">Gene2Name</span></code></p>
 </div>
 <div class="section" id="parameter-files">
 <h2>Parameter Files<a class="headerlink" href="#parameter-files" title="Permalink to this headline">¶</a></h2>
@@ -129,7 +139,7 @@ There are a number of software dependencies.  These should be callable without a
 <div class="section" id="starchip-fusions">
 <h2>STARChip-Fusions<a class="headerlink" href="#starchip-fusions" title="Permalink to this headline">¶</a></h2>
 <p>starchip-fusions is run on individual samples.</p>
-<p><code class="docutils literal notranslate"><span class="pre">/path/to/starchip/starchip-fusions.pl</span> <span class="pre">output_seed</span> <span class="pre">Chimeric.out.junction</span> <span class="pre">Paramters.txt</span></code></p>
+<p><code class="docutils literal"><span class="pre">/path/to/starchip/starchip-fusions.pl</span> <span class="pre">output_seed</span> <span class="pre">Chimeric.out.junction</span> <span class="pre">Paramters.txt</span></code></p>
 <p>output_seed is the unique preface to your output file; e.g. sample1, or output/sample1
 Chimeric.out.junction is the full path to your STAR output file Chimeric.out.junction.
 Parameters.txt is your unique parameters file for this job.</p>
@@ -137,7 +147,7 @@ Parameters.txt is your unique parameters file for this job.</p>
 <div class="section" id="starchip-circles">
 <h2>STARChip-Circles<a class="headerlink" href="#starchip-circles" title="Permalink to this headline">¶</a></h2>
 <p>starchip-circles is run on groups of samples.</p>
-<p><code class="docutils literal notranslate"><span class="pre">/path/to/starchip/starchip-circles.pl</span> <span class="pre">STARdirs.txt</span> <span class="pre">Parameters.txt</span></code></p>
+<p><code class="docutils literal"><span class="pre">/path/to/starchip/starchip-circles.pl</span> <span class="pre">STARdirs.txt</span> <span class="pre">Parameters.txt</span></code></p>
 <p>STARdirs.txt is a text file with a full path to one STAR output directory per line
 Parameters.txt is your parameters file for this job.</p>
 </div>
@@ -164,16 +174,16 @@ Parameters.txt is your parameters file for this job.</p>
 <td>True/false : do you want a consensus sequence generated for your fusions? Should be true unless you cannot use mafft or samtools for some reason</td>
 </tr>
 <tr class="row-even"><td>splitReads</td>
-<td>Integer.  Number of minimum reads that cross fusion border.  Can put ‘auto’ to have starchip make a best guess for your sample.</td>
+<td>Integer.  Number of minimum reads that cross fusion border.  Can put &#8216;auto&#8217; to have starchip make a best guess for your sample.</td>
 </tr>
 <tr class="row-odd"><td>spancutoff</td>
-<td>Integer. Number of minimum paired ends to map to opposite ends of a fusion without crossing the fusion site.  Can put ‘auto’ to have starchip make a best guess for your sample.</td>
+<td>Integer. Number of minimum paired ends to map to opposite ends of a fusion without crossing the fusion site.  Can put &#8216;auto&#8217; to have starchip make a best guess for your sample.</td>
 </tr>
 <tr class="row-even"><td>uniqueReads</td>
 <td>Integer.  Number of minimum unique reads that cross fusion border.  Useful for eliminating fusions whose support comes from a single PCR amplicon.</td>
 </tr>
 <tr class="row-odd"><td>wiggle</td>
-<td>Integer.  Reads mapping to opposite ends of a fusion without crossing the fusion junction itself have ambiguous fusion site.  Starchip looks for fusions within ‘wiggle’ bp of the ambiguous fusion site to share</td>
+<td>Integer.  Reads mapping to opposite ends of a fusion without crossing the fusion junction itself have ambiguous fusion site.  Starchip looks for fusions within &#8216;wiggle&#8217; bp of the ambiguous fusion site to share</td>
 </tr>
 <tr class="row-even"><td>overlapLimit</td>
 <td>Integer.  Fusions called less than overlapLimit bp from each other will be merged.</td>
@@ -182,7 +192,7 @@ Parameters.txt is your parameters file for this job.</p>
 <td>Integer.  Intrachromosomal fusions must be at least this value apart to be reported.</td>
 </tr>
 <tr class="row-even"><td>lopsidedupper</td>
-<td>Float. Starchip will filter out fusions that are imbalanced in the number of reads on one strand vs another.  With unstranded RNA-seq, we expect roughly equal reads to map to the ‘top’ strand vs the ‘bottom’ strand.  Using the equation: ratio = (top side reads + 0.1) / (bottom side reads + 0.1).  ratio must be below ‘lopsidedupper’ and above ‘lopsidedlower’</td>
+<td>Float. Starchip will filter out fusions that are imbalanced in the number of reads on one strand vs another.  With unstranded RNA-seq, we expect roughly equal reads to map to the &#8216;top&#8217; strand vs the &#8216;bottom&#8217; strand.  Using the equation: ratio = (top side reads + 0.1) / (bottom side reads + 0.1).  ratio must be below &#8216;lopsidedupper&#8217; and above &#8216;lopsidedlower&#8217;</td>
 </tr>
 <tr class="row-odd"><td>lopsidedlower</td>
 <td>see above.</td>
@@ -191,10 +201,10 @@ Parameters.txt is your parameters file for this job.</p>
 <td>Starchip will look for files in the data directory bearing this genome ID.  For example, genome = hg19 will cause starchip to look for and use data/hg19.abparts and data/hg19.cnvs.</td>
 </tr>
 <tr class="row-odd"><td>cnvwiggle</td>
-<td>Integer. Skip fusions with an edge within ‘cnvwiggle’ bp of a known cnv.</td>
+<td>Integer. Skip fusions with an edge within &#8216;cnvwiggle&#8217; bp of a known cnv.</td>
 </tr>
 <tr class="row-even"><td>circlesize</td>
-<td>Integer.  Fusions that appear to be circular RNA (same strand, fusion splices ‘backwards’) are skipped.  However, circlesize represents an upper limit for the size of filtered circular RNA.</td>
+<td>Integer.  Fusions that appear to be circular RNA (same strand, fusion splices &#8216;backwards&#8217;) are skipped.  However, circlesize represents an upper limit for the size of filtered circular RNA.</td>
 </tr>
 <tr class="row-odd"><td>refbed</td>
 <td>String.  The bed file generated earlier with gtf2bed.sh.</td>
@@ -206,7 +216,7 @@ Parameters.txt is your parameters file for this job.</p>
 <td>String.  A genome fasta file (preferably the one used to build the STAR index).  If not the same it MUST be the same genome build and it must have the same chromosome identifiers.</td>
 </tr>
 <tr class="row-even"><td>splitscoremod</td>
-<td>Float.  Each fusion will have a confidence score generated based on the number of reads of support and the strand imbalance of that support. This score is then adjusted if the read support has a poor skew, if it’s possible it’s a read through fusions, and if the fusion sites are in repeats.</td>
+<td>Float.  Each fusion will have a confidence score generated based on the number of reads of support and the strand imbalance of that support. This score is then adjusted if the read support has a poor skew, if it&#8217;s possible it&#8217;s a read through fusions, and if the fusion sites are in repeats.</td>
 </tr>
 <tr class="row-odd"><td>spanscoremod</td>
 <td>Float.  See above.</td>
@@ -229,15 +239,15 @@ Parameters.txt is your parameters file for this job.</p>
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Parameter</th>
-<th class="head">&#160;</th>
+<th class="head">&nbsp;</th>
 </tr>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td>readsCutoff</td>
-<td>Integer. Minimum number of reads crossing the circular RNA backsplice required.  To check multiple cutoffs (eg to examine 5, 10, and 15 reads, use the following format (within quotes)  “( 5 10 15 )” )</td>
+<td>Integer. Minimum number of reads crossing the circular RNA backsplice required.  To check multiple cutoffs (eg to examine 5, 10, and 15 reads, use the following format (within quotes)  &#8220;( 5 10 15 )&#8221; )</td>
 </tr>
 <tr class="row-odd"><td>minSubjectLimit</td>
-<td>Integer. Minimum number of individuals with ‘readsCutoff’ reads required to carry forward a circRNA for analysis.</td>
+<td>Integer. Minimum number of individuals with &#8216;readsCutoff&#8217; reads required to carry forward a circRNA for analysis.</td>
 </tr>
 <tr class="row-even"><td>cpus</td>
 <td>Integer.  Number of threads to use.  If a non-numeric value is given, the command nproc will be used to determine the number of threads.</td>
@@ -261,7 +271,7 @@ Parameters.txt is your parameters file for this job.</p>
 <td>String.  A genome fasta file (preferably the one used to build the STAR index).  If not the same it MUST be the same genome build and it must have the same chromosome identifiers.</td>
 </tr>
 <tr class="row-odd"><td>starprefix</td>
-<td>String.  If you used the star parameter –outFileNamePrefix, give that value here.  E.g. if your star output has a file named “mydata_Chimeric.out.junction”  then put “mydata_” for starprefix.</td>
+<td>String.  If you used the star parameter &#8211;outFileNamePrefix, give that value here.  E.g. if your star output has a file named &#8220;mydata_Chimeric.out.junction&#8221;  then put &#8220;mydata_&#8221; for starprefix.</td>
 </tr>
 <tr class="row-even"><td>IDstepsback</td>
 <td>Integer.  Where in your pathway (position from the right) is the sample identifier.  For example if your star output for <strong>sample1</strong> is in the directory at: <br /> /path/to/<strong>sample1</strong>/star/2.4.2/output/Chimeric.out.junction <br /> Your IDstepsback is 4.  Alternatively the path <br /> /path/to/star/2.4.2/<strong>sample1</strong>/Chimeric.out.junction <br /> has IDstepsback value of 1.</td>
@@ -319,20 +329,18 @@ Parameters.txt is your parameters file for this job.</p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/index.rst.txt"
+      <li><a href="_sources/index.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
-    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -343,11 +351,11 @@ Parameters.txt is your parameters file for this job.</p>
       &copy;2016, Nicholas K. Akers.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
-      <a href="_sources/index.rst.txt"
+      <a href="_sources/index.txt"
           rel="nofollow">Page source</a>
     </div>
 
