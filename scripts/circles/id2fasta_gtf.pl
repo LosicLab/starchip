@@ -2,9 +2,8 @@
 use warnings;
 use strict;
 
-my $crnasource = "combo";
+my $crnasource = "circRNA";
 my $exon_halfsize= 1; 
-#my $ref = "/sc/orga/projects/losicb01a/common_folder/ref/hg19/fasta/ucsc_hg19_dna_primary.fa";
 my $ref = $ARGV[1] ; 
 my $chrflag = 0; #1 if remove chr from cRNA ids.
 my $offsetval = 10000; 

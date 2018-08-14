@@ -74,6 +74,7 @@ if [ ${runstar} = 'true' ] ; then
 		fi
 	else
 		echo "cannot check your version of STAR, please add STAR to your path"
+		exit
 	fi
 	# Create STAR alignment Commands
 	rm -f rawdata/stardirs.txt
@@ -110,7 +111,7 @@ for cutoff in "${cutofflist[@]}" ; do
 	#removing multithreading here--it was causing issues for users where the buffer fills and then flushes, giving incomplete data
         #ls rawdata/backsplices* | xargs --max-procs=${cpus} -I {} awk -v var="\$cutoff" -v var2="rawdata/cRNA.cutoff.\${cutoff}" '{ if (\$1 >= var) print \$0 >> var2 }' {}
 	ls rawdata/backsplices* | while read line ; do 
-		awk -v var=$cutoff -v var2=rawdata/cRNA.cutoff.${cutoff} '{ if ($1 >= var) print $0 >> var2 }' $line
+		awk -v var=\${cutoff} -v var2=rawdata/cRNA.cutoff.\${cutoff} '{ if ($1 >= var) print $0 >> var2 }' \${line}
 	done
 done
 
