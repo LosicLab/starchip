@@ -1,3 +1,6 @@
+v1.3e
+=====
+Fixing a syntax bug causing program failures
 v1.3d
 =====
 Updates to make STARChip compatible with STAR 2.6.0c+

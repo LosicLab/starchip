@@ -111,7 +111,7 @@ for cutoff in "${cutofflist[@]}" ; do
 	#removing multithreading here--it was causing issues for users where the buffer fills and then flushes, giving incomplete data
         #ls rawdata/backsplices* | xargs --max-procs=${cpus} -I {} awk -v var="\$cutoff" -v var2="rawdata/cRNA.cutoff.\${cutoff}" '{ if (\$1 >= var) print \$0 >> var2 }' {}
 	ls rawdata/backsplices* | while read line ; do 
-		awk -v var=\${cutoff} -v var2=rawdata/cRNA.cutoff.\${cutoff} '{ if ($1 >= var) print $0 >> var2 }' \${line}
+		awk -v var=\${cutoff} -v var2=rawdata/cRNA.cutoff.\${cutoff} '{ if (\$1 >= var) print \$0 >> var2 }' \${line}
 	done
 done
 
